@@ -125,12 +125,14 @@ public class ZooDefs {
 
         /**
          * This Id represents anyone.
+         * world：开放的 不需要认证的
          */
         Id ANYONE_ID_UNSAFE = new Id("world", "anyone");
 
         /**
          * This Id is only usable to set ACLs. It will get substituted with the
          * Id's the client authenticated with.
+         * auth：需要认证的
          */
         Id AUTH_IDS = new Id("auth", "");
 

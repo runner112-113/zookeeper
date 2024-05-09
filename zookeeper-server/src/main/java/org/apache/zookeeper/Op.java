@@ -40,12 +40,18 @@ import org.apache.zookeeper.server.EphemeralType;
  * Sub-classes of Op each represent each detailed type but should not normally be referenced except via
  * the provided factory methods.
  *
+ * @中文
+ *  表示多操作事务中的单个操作。
+ *  每个操作可以是创建、更新、删除、版本检查，也可以是读取操作，
+ *  如getChildren或getData。Op的每个子类代表每个详细的类型，但通常不应被引用，除非通过提供的工厂方法。
+ *
  * @see ZooKeeper#create(String, byte[], java.util.List, CreateMode)
  * @see ZooKeeper#create(String, byte[], java.util.List, CreateMode, org.apache.zookeeper.AsyncCallback.StringCallback, Object)
  * @see ZooKeeper#delete(String, int)
  * @see ZooKeeper#setData(String, byte[], int)
  * @see ZooKeeper#getData(String, boolean, Stat)
  * @see ZooKeeper#getChildren(String, boolean)
+ *
  */
 public abstract class Op {
 
@@ -54,6 +60,7 @@ public abstract class Op {
         READ
     }
 
+    // 就是ZooDefs#OpCode
     private int type;
     private String path;
     private OpKind opKind;
