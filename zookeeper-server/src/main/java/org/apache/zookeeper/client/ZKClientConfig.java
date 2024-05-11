@@ -48,6 +48,14 @@ public class ZKClientConfig extends ZKConfig {
      * automatically reset watches during session reconnect, this option allows
      * the client to turn off this behavior by setting the property
      * "zookeeper.disableAutoWatchReset" to "true"
+     *
+     * 在 ZooKeeper 中，当某个节点的数据发生变化时，与该节点相关的 Watch 会被触发。
+     * 然而，有时候在 Watch 触发后，ZooKeeper 客户端会自动重新设置 Watch，以便在将来节点的数据发生变化时再次触发 Watch。
+     * 但是在某些情况下，这种自动 Watch 重置可能不符合应用程序的需求。
+     *
+     * 通过将 zookeeper.disableAutoWatchReset 设置为 true，可以禁用自动 Watch 重置功能，
+     * 这样 Watch 在触发后将不会被自动重新设置。
+     * 这意味着在每次 Watch 触发后，客户端需要显式地重新设置 Watch，以便在将来再次触发 Watch。
      */
     public static final String DISABLE_AUTO_WATCH_RESET = "zookeeper.disableAutoWatchReset";
     @SuppressWarnings("deprecation")

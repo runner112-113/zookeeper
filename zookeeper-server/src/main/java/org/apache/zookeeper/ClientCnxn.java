@@ -210,6 +210,13 @@ public class ClientCnxn {
      * <p>
      * If this field is false (which implies we haven't seen r/w server before)
      * then non-zero sessionId is fake, otherwise it is valid.
+     *
+     * 在 ZooKeeper 中，客户端连接到 ZooKeeper 集群时会首先与一个读/写服务器节点建立连接。
+     * 一旦客户端成功连接到了一个读/写服务器节点，它就会将 seenRwServerBefore 属性设置为 true。
+     * 这个属性的主要作用是在客户端连接过程中进行状态追踪。
+     *
+     * 在一些特殊的情况下，例如 ZooKeeper 集群发生重新选举或者读/写节点发生切换时，客户端可能会重新连接到一个新的读/写节点。
+     * 在这种情况下，seenRwServerBefore 可以帮助客户端识别是否已经连接过读/写节点，从而决定是否需要重新设置一些状态。
      */
     volatile boolean seenRwServerBefore = false;
 
@@ -1087,6 +1094,7 @@ public class ClientCnxn {
             String hostPort = addr.getHostString() + ":" + addr.getPort();
             MDC.put("myid", hostPort);
             setName(getName().replaceAll("\\(.*\\)", "(" + hostPort + ")"));
+            // enable sasl client
             if (clientConfig.isSaslClientEnabled()) {
                 try {
                     zooKeeperSaslClient = new ZooKeeperSaslClient(
@@ -1106,6 +1114,7 @@ public class ClientCnxn {
             }
             logStartConnect(addr);
 
+            // 建立连接
             clientCnxnSocket.connect(addr);
         }
 
@@ -1140,6 +1149,7 @@ public class ClientCnxn {
                             serverAddress = hostProvider.next(1000);
                         }
                         onConnecting(serverAddress);
+                        // 建立socket连接
                         startConnect(serverAddress);
                         // Update now to start the connection timer right after we make a connection attempt
                         clientCnxnSocket.updateNow();
@@ -1184,6 +1194,7 @@ public class ClientCnxn {
                         to = connectTimeout - clientCnxnSocket.getIdleRecv();
                     }
 
+                    // socket连接超时监控
                     if (to <= 0) {
                         String warnInfo = String.format(
                             "Client session timed out, have not heard from server in %dms for session id 0x%s",
@@ -1200,6 +1211,7 @@ public class ClientCnxn {
                                              - ((clientCnxnSocket.getIdleSend() > 1000) ? 1000 : 0);
                         //send a ping request either time is due or no packet sent out within MAX_SEND_PING_INTERVAL
                         if (timeToNextPing <= 0 || clientCnxnSocket.getIdleSend() > MAX_SEND_PING_INTERVAL) {
+                            // 发送心跳
                             sendPing();
                             clientCnxnSocket.updateLastSend();
                         } else {
@@ -1524,6 +1536,8 @@ public class ClientCnxn {
             null,
             watchRegistration,
             watchDeregistration);
+
+        // 在此处阻塞等待请求返回
         synchronized (packet) {
             if (requestTimeout > 0) {
                 // Wait for request completion with timeout
@@ -1535,6 +1549,7 @@ public class ClientCnxn {
                 }
             }
         }
+        // 请求超时的处理
         if (r.getErr() == Code.REQUESTTIMEOUT.intValue()) {
             sendThread.cleanAndNotifyState();
         }

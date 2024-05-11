@@ -321,6 +321,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
     }
 
     private synchronized void wakeupCnxn() {
+        // 通过调用 wakeup() 方法，可以立即中断 select() 方法的阻塞，使线程能够立即响应其他事件
         selector.wakeup();
     }
 
@@ -347,6 +348,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     sendThread.primeConnection();
                 }
             } else if (k.isReadable() || k.isWritable()) {
+                // 处理响应 和 发送请求
                 doIO(pendingQueue, cnxn);
             }
         }
