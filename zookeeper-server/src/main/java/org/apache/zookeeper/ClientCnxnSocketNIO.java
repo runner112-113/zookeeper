@@ -112,18 +112,24 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     if ((p.requestHeader != null)
                         && (p.requestHeader.getType() != OpCode.ping)
                         && (p.requestHeader.getType() != OpCode.auth)) {
+                        // 设置xid
                         p.requestHeader.setXid(cnxn.getXid());
                     }
+                    // 准备好bb
                     p.createBB();
                 }
                 sock.write(p.bb);
+                // 如果写完了
                 if (!p.bb.hasRemaining()) {
+                    // 使用LongAdder性能更高
                     sentCount.getAndIncrement();
+                    // 移除p
                     outgoingQueue.removeFirstOccurrence(p);
                     if (p.requestHeader != null
                         && p.requestHeader.getType() != OpCode.ping
                         && p.requestHeader.getType() != OpCode.auth) {
                         synchronized (pendingQueue) {
+                            // 请求已发送 将请求添加到pendingQueue中
                             pendingQueue.add(p);
                         }
                     }
@@ -135,6 +141,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                 // from within ZooKeeperSaslClient (if client is configured
                 // to attempt SASL authentication), or in either doIO() or
                 // in doTransport() if not.
+                // turn off write interest flag.
                 disableWrite();
             } else if (!initialized && p != null && !p.bb.hasRemaining()) {
                 // On initial connection, write the complete connect request

@@ -42,6 +42,8 @@ import org.slf4j.LoggerFactory;
  * QuorumOracleMaj is designed to be functional in a 2-nodes configuration. The only method that this class overrides super
  * class' method is containsQuorum(). Besides the check of oracle, it also checks the number of voting member. Whenever the
  * number of voting members is greater than 2. QuorumOracleMaj shall function as hook to its super class.
+ *
+ * 神谕仲裁校验器 - 命令性的校验器
  * */
 public class QuorumOracleMaj extends QuorumMaj {
     private static final Logger LOG = LoggerFactory.getLogger(QuorumOracleMaj.class);

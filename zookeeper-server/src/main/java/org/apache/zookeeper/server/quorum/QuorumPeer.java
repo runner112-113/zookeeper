@@ -587,9 +587,21 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
      * Zab protocol that peer is running.
      */
     public enum ZabState {
+        /**
+         * 选举
+         */
         ELECTION,
+        /**
+         * 发现
+         */
         DISCOVERY,
+        /**
+         * 同步
+         */
         SYNCHRONIZATION,
+        /**
+         * 广播
+         */
         BROADCAST
     }
 
@@ -599,8 +611,17 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
      */
     public enum SyncMode {
         NONE,
+        /**
+         * 增量
+         */
         DIFF,
+        /**
+         * 快照
+         */
         SNAP,
+        /**
+         * 撤回(回滚)
+         */
         TRUNC
     }
 
@@ -613,7 +634,13 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
      * conditions change (e.g. which state to become after LOOKING).
      */
     public enum LearnerType {
+        /**
+         * 参与者 - 参与选举
+         */
         PARTICIPANT,
+        /**
+         * 观察者 - 不参与选举
+         */
         OBSERVER
     }
 
@@ -666,7 +693,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
      * QuorumVerifier implementation; default (majority).
      */
 
-    //last committed quorum verifier
+    //last committed quorum verifier  校验器
     private QuorumVerifier quorumVerifier;
 
     //last proposed quorum verifier
@@ -946,6 +973,9 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
     private AtomicReference<ZabState> zabState = new AtomicReference<>(ZabState.ELECTION);
     private AtomicReference<SyncMode> syncMode = new AtomicReference<>(SyncMode.NONE);
     private AtomicReference<String> leaderAddress = new AtomicReference<>("");
+    /**
+     * leader的服务器id
+     */
     private AtomicLong leaderId = new AtomicLong(-1);
 
     private boolean reconfigFlag = false; // indicates that a reconfig just committed

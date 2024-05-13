@@ -29,6 +29,9 @@ public class ZooKeeperThread extends Thread {
 
     private static final Logger LOG = LoggerFactory.getLogger(ZooKeeperThread.class);
 
+    /**
+     * 当线程start运行之后，对于未捕获的异常，线程会中断，同时jvm会回到UncaughtExceptionHandler这个接口的uncaughtException方法
+     */
     private UncaughtExceptionHandler uncaughtExceptionalHandler = (t, e) -> handleException(t.getName(), e);
 
     public ZooKeeperThread(String threadName) {

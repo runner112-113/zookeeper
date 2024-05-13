@@ -36,10 +36,20 @@ import org.apache.zookeeper.server.quorum.SyncedLearnerTracker;
 
 public interface QuorumVerifier {
 
+    /**
+     *
+     * @param id   server_id
+     * @return
+     */
     long getWeight(long id);
     boolean containsQuorum(Set<Long> set);
     long getVersion();
     void setVersion(long ver);
+
+    /**
+     * all = voting + observer
+     * @return
+     */
     Map<Long, QuorumServer> getAllMembers();
     Map<Long, QuorumServer> getVotingMembers();
     Map<Long, QuorumServer> getObservingMembers();

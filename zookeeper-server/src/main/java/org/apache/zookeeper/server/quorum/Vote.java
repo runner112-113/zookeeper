@@ -69,12 +69,24 @@ public class Vote {
 
     private final int version;
 
+    /**
+     * myId 服务器id
+     */
     private final long id;
 
+    /**
+     * 事务id,epoch(高32位)+counter(低32位)
+     */
     private final long zxid;
 
+    /**
+     * 选举的纪元（周期）
+     */
     private final long electionEpoch;
 
+    /**
+     *
+     */
     private final long peerEpoch;
 
     public int getVersion() {

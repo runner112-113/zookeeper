@@ -60,6 +60,8 @@ import org.slf4j.LoggerFactory;
  *  weight.9=1
  *
  * Note that it is still necessary to define peers using the server keyword.
+ *
+ * 层次仲裁校验器
  */
 
 public class QuorumHierarchical implements QuorumVerifier {

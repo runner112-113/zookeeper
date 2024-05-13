@@ -24,6 +24,7 @@ import org.apache.zookeeper.server.quorum.flexible.QuorumVerifier;
 
 public class SyncedLearnerTracker {
 
+    // 哪些节点已经确认了
     protected ArrayList<QuorumVerifierAcksetPair> qvAcksetPairs = new ArrayList<>();
 
     public void addQuorumVerifier(QuorumVerifier qv) {

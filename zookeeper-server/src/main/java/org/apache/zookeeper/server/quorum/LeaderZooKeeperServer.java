@@ -42,6 +42,8 @@ import org.apache.zookeeper.server.persistence.FileTxnSnapLog;
  * processors: PrepRequestProcessor -&gt; ProposalRequestProcessor -&gt;
  * CommitProcessor -&gt; Leader.ToBeAppliedRequestProcessor -&gt;
  * FinalRequestProcessor
+ *
+ * PrepRequestProcessor ---> ProposalRequestProcessor ---> CommitProcessor ---> Leader.ToBeAppliedRequestProcessor ---> FinalRequestProcessor
  */
 public class LeaderZooKeeperServer extends QuorumZooKeeperServer {
 

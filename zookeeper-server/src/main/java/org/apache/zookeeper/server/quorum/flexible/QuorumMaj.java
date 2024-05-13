@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
  * This class implements a validator for majority quorums. The implementation is
  * straightforward.
  *
+ * 大多数仲裁校验器
  */
 public class QuorumMaj implements QuorumVerifier {
 
