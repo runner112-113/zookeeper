@@ -89,12 +89,14 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
 
     /**
      * Incoming requests.
+     * 接受到所有的 Request 都会先入queuedRequests
      */
     protected LinkedBlockingQueue<Request> queuedRequests = new LinkedBlockingQueue<>();
 
     /**
      * Incoming requests that are waiting on a commit,
      * contained in order of arrival
+     * Request 是事务修改型的;正在等待 COMMIT 的 Request，这个队列是 queuedRequest 队列的子集
      */
     protected final LinkedBlockingQueue<Request> queuedWriteRequests = new LinkedBlockingQueue<>();
 
@@ -110,12 +112,15 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
 
     /**
      * Requests that have been committed.
+     * 已经 COMMIT 的 Request
      */
     protected final LinkedBlockingQueue<Request> committedRequests = new LinkedBlockingQueue<>();
 
     /**
      * Requests that we are holding until commit comes in. Keys represent
      * session ids, each value is a linked list of the session's requests.
+     *
+     * sessionId -> Deque< Request > 的映射，这是为了挂起这些请求，等待 COMMIT；
      */
     protected final Map<Long, Deque<Request>> pendingRequests = new HashMap<>(10000);
 

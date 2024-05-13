@@ -521,6 +521,7 @@ public class DataTree {
             updateQuotaStat(lastPrefix, bytes, 1);
         }
         updateWriteStat(path, bytes);
+        // 触发Watch
         dataWatches.triggerWatch(path, Event.EventType.NodeCreated, zxid, acl);
         childWatches.triggerWatch(parentName.equals("") ? "/" : parentName,
             Event.EventType.NodeChildrenChanged, zxid, parentAcl);

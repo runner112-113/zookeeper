@@ -79,13 +79,17 @@ public class ProposalRequestProcessor implements RequestProcessor {
             if (shouldForwardToNextProcessor(request)) {
                 nextProcessor.processRequest(request);
             }
+            // 事务 类型的 Transactions ---> 需要就集群同步
             if (request.getHdr() != null) {
                 // We need to sync and get consensus on any transactions
                 try {
+                    // 发起提案
                     zks.getLeader().propose(request);
                 } catch (XidRolloverException e) {
                     throw new RequestProcessorException(e.getMessage(), e);
                 }
+                // 执行 SyncRequestProcessor 以及
+                // 下一个 AckReuqestProcessor
                 syncProcessor.processRequest(request);
             }
         }

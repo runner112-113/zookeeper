@@ -109,9 +109,12 @@ public class FollowerZooKeeperServer extends LearnerZooKeeperServer {
             return;
         }
         long firstElementZxid = pendingTxns.element().zxid;
+        // 收到来之Leader节点的commit时，会拿commit中的zxid与pendingTxns队列的头部txid进行对比，
+        // 必须一样，如果不一样，那么本Follower会退出，然后重新加入集群，再次跟Leader进行同步数据！
         if (firstElementZxid != zxid) {
             LOG.error("Committing zxid 0x" + Long.toHexString(zxid)
                       + " but next pending txn 0x" + Long.toHexString(firstElementZxid));
+            // 退出系统
             ServiceUtils.requestSystemExit(ExitCode.UNMATCHED_TXN_COMMIT.getValue());
         }
         Request request = pendingTxns.remove();

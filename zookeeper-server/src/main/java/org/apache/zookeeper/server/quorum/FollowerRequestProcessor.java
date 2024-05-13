@@ -95,6 +95,7 @@ public class FollowerRequestProcessor extends ZooKeeperCriticalThread implements
                 // add it to pendingSyncs.
                 switch (request.type) {
                 case OpCode.sync:
+                    // sync request add pendingSyncs
                     zks.pendingSyncs.add(request);
                     zks.getFollower().request(request);
                     break;
@@ -108,6 +109,7 @@ public class FollowerRequestProcessor extends ZooKeeperCriticalThread implements
                 case OpCode.reconfig:
                 case OpCode.setACL:
                 case OpCode.multi:
+                    // 转发给leader
                     zks.getFollower().request(request);
                     break;
                 case OpCode.createSession:

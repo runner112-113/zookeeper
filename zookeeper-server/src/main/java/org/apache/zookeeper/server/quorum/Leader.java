@@ -88,7 +88,9 @@ public class Leader extends LearnerMaster {
 
     public static class Proposal extends SyncedLearnerTracker {
 
+        // Leader跟Follower之间进行交互的数据包
         private QuorumPacket packet;
+        // 事务请求本体
         protected Request request;
 
         public Proposal() {
@@ -1071,6 +1073,7 @@ public class Leader extends LearnerMaster {
             LOG.debug("outstanding is 0");
             return;
         }
+        // ACK 包过期，直接放弃
         if (lastCommitted >= zxid) {
             LOG.debug(
                 "proposal has already been committed, pzxid: 0x{} zxid: 0x{}",
@@ -1091,6 +1094,7 @@ public class Leader extends LearnerMaster {
 
         p.addAck(sid);
 
+        // 尝试提交，假如提交顺利，将会发送 COMMIT 包到所有的 Follower 中
         boolean hasCommitted = tryToCommit(p, zxid, followerAddr);
 
         // If p is a reconfiguration, multiple other operations may be ready to be committed,
@@ -1321,6 +1325,7 @@ public class Leader extends LearnerMaster {
 
             lastProposed = p.packet.getZxid();
             outstandingProposals.put(lastProposed, p);
+            // 发给所有的Follower
             sendPacket(pp);
         }
         ServerMetrics.getMetrics().PROPOSAL_COUNT.add(1);
