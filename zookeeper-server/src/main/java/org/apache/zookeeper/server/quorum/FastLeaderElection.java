@@ -957,6 +957,7 @@ public class FastLeaderElection implements Election {
              * 换句话说，如果v.electionEpoch == logicalclock，则投票v在recvset中。
              * 当前参与者使用recvset来推断是否有大多数参与者投了赞成票。
              */
+            // 投票箱（所收到的选票）
             Map<Long, Vote> recvset = new HashMap<>();
 
             /*

@@ -75,6 +75,7 @@ public class Follower extends Learner {
         self.setElectionTimeTaken(electionTimeTaken);
         ServerMetrics.getMetrics().ELECTION_TIME.add(electionTimeTaken);
         LOG.info("FOLLOWING - LEADER ELECTION TOOK - {} {}", electionTimeTaken, QuorumPeer.FLE_TIME_UNIT);
+        // 重置计时器
         self.start_fle = 0;
         self.end_fle = 0;
         fzk.registerJMX(new FollowerBean(this, zk), self.jmxLocalPeerBean);
@@ -83,11 +84,14 @@ public class Follower extends Learner {
         boolean completedSync = false;
 
         try {
+            // 进入ZAB的DISCOVERY阶段
             self.setZabState(QuorumPeer.ZabState.DISCOVERY);
             QuorumServer leaderServer = findLeader();
             try {
+                // Follower和Leader建立连接
                 connectToLeader(leaderServer.addr, leaderServer.hostname);
                 connectionTime = System.currentTimeMillis();
+                // 将自己的zxid以及sid发给Leader 接收到Leader返回的newEpoch
                 long newEpochZxid = registerWithLeader(Leader.FOLLOWERINFO);
                 if (self.isReconfigStateChange()) {
                     throw new Exception("learned about role change");
@@ -104,8 +108,11 @@ public class Follower extends Learner {
                 }
                 long startTime = Time.currentElapsedTime();
                 self.setLeaderAddressAndId(leaderServer.addr, leaderServer.getId());
+                // 进入ZAB的SYNCHRONIZATION阶段
                 self.setZabState(QuorumPeer.ZabState.SYNCHRONIZATION);
+                // 和Leader进行同步
                 syncWithLeader(newEpochZxid);
+                // 进入ZAB的BROADCAST阶段
                 self.setZabState(QuorumPeer.ZabState.BROADCAST);
                 completedSync = true;
                 long syncTime = Time.currentElapsedTime() - startTime;

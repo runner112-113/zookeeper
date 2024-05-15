@@ -128,6 +128,7 @@ public class FollowerZooKeeperServer extends LearnerZooKeeperServer {
             return;
         }
 
+        // 接收到leader发送的Leader.SYNC消息后，才真正commit这个请求
         Request r = pendingSyncs.remove();
         if (r instanceof LearnerSyncRequest) {
             LearnerSyncRequest lsr = (LearnerSyncRequest) r;

@@ -483,6 +483,7 @@ public class Learner {
         /*
          * Send follower info, including last zxid and sid
          */
+        // 拿到自己最后的zxid
         long lastLoggedZxid = self.getLastLoggedZxid();
         QuorumPacket qp = new QuorumPacket();
         qp.setType(pktType);
@@ -499,6 +500,7 @@ public class Learner {
 
         writePacket(qp, true);
         readPacket(qp);
+        // Leader返回的newEpoch
         final long newEpoch = ZxidUtils.getEpochFromZxid(qp.getZxid());
         if (qp.getType() == Leader.LEADERINFO) {
             // we are connected to a 1.0 server so accept the new epoch and read the next packet

@@ -504,6 +504,7 @@ public class Leader extends LearnerMaster {
         @Override
         public void run() {
             if (!stop.get() && !serverSockets.isEmpty()) {
+                // 每一个Follower Socket一个线程
                 ExecutorService executor = Executors.newFixedThreadPool(serverSockets.size());
                 CountDownLatch latch = new CountDownLatch(serverSockets.size());
 
@@ -1339,6 +1340,7 @@ public class Leader extends LearnerMaster {
      */
 
     public synchronized void processSync(LearnerSyncRequest r) {
+        // 当Leader收到一个sync请求时，如果leader当前没有待commit的决议，那么leader会立即发送一个Leader.SYNC消息给follower
         if (outstandingProposals.isEmpty()) {
             sendSync(r);
         } else {
@@ -1476,6 +1478,7 @@ public class Leader extends LearnerMaster {
                 connectingFollowers.add(sid);
             }
             QuorumVerifier verifier = self.getQuorumVerifier();
+            // 超过一半的follower发送FOLLOWERINFO过来才可以
             if (connectingFollowers.contains(self.getMyId()) && verifier.containsQuorum(connectingFollowers)) {
                 waitingForNewEpoch = false;
                 self.setAcceptedEpoch(epoch);
