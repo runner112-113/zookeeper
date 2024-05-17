@@ -117,6 +117,7 @@ public class FollowerZooKeeperServer extends LearnerZooKeeperServer {
             // 退出系统
             ServiceUtils.requestSystemExit(ExitCode.UNMATCHED_TXN_COMMIT.getValue());
         }
+        // 移除缓存的txns
         Request request = pendingTxns.remove();
         request.logLatency(ServerMetrics.getMetrics().COMMIT_PROPAGATION_LATENCY);
         commitProcessor.commit(request);

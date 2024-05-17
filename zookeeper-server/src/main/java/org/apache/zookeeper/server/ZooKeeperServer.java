@@ -1276,6 +1276,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
             boolean validpacket = Request.isValid(si.type);
             if (validpacket) {
                 setLocalSessionFlag(si);
+                // 请求进入责任链的入口
                 firstProcessor.processRequest(si);
                 if (si.cnxn != null) {
                     incInProcess();

@@ -126,6 +126,7 @@ public class Follower extends Learner {
                     om = null;
                 }
                 // create a reusable packet to reduce gc impact
+                // 在此循环处理请求
                 QuorumPacket qp = new QuorumPacket();
                 while (this.isRunning()) {
                     readPacket(qp);
@@ -186,6 +187,7 @@ public class Follower extends Learner {
                 self.setLastSeenQuorumVerifier(qv, true);
             }
 
+            // 计入事务日志 并会发送ACK
             fzk.logRequest(hdr, txn, digest);
             if (hdr != null) {
                 /*

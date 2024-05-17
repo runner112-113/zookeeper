@@ -365,6 +365,7 @@ public class LearnerHandler extends ZooKeeperThread {
                 }
 
                 // Log the zxid of the last request, if it is a valid zxid.
+                // 记录lastZxid
                 if (p.getZxid() > 0) {
                     lastZxid = p.getZxid();
                 }
@@ -667,7 +668,7 @@ public class LearnerHandler extends ZooKeeperThread {
             // 所有完成数据同步的服务器发送UPTODATE指令终止数据同步流程
             queuedPackets.add(new QuorumPacket(Leader.UPTODATE, -1, null, null));
 
-            // 该循环不断处理来自learner的请求
+            // 该循环不断处理来自learner的请求 维持和Learner通信
             while (true) {
                 qp = new QuorumPacket();
                 ia.readRecord(qp, "packet");
@@ -695,6 +696,7 @@ public class LearnerHandler extends ZooKeeperThread {
                         LOG.debug("Received ACK from Observer {}", this.sid);
                     }
                     syncLimitCheck.updateAck(qp.getZxid());
+                    // 处理ACK
                     learnerMaster.processAck(this.sid, qp.getZxid(), sock.getLocalSocketAddress());
                     break;
                 case Leader.PING:
@@ -718,6 +720,7 @@ public class LearnerHandler extends ZooKeeperThread {
                     type = bb.getInt();
                     bb = bb.slice();
                     Request si;
+                    // 来自Learner的SYNC请求
                     if (type == OpCode.sync) {
                         si = new LearnerSyncRequest(this, sessionId, cxid, type, RequestRecord.fromBytes(bb), qp.getAuthinfo());
                     } else {
@@ -1119,15 +1122,6 @@ public class LearnerHandler extends ZooKeeperThread {
         queuePacket(packet);
     }
 
-    void queuePacket(QuorumPacket p) {
-        queuedPackets.add(p);
-        // Add a MarkerQuorumPacket at regular intervals.
-        if (shouldSendMarkerPacketForLogging() && packetCounter.getAndIncrement() % markerPacketInterval == 0) {
-            queuedPackets.add(new MarkerQuorumPacket(System.nanoTime()));
-        }
-        queuedPacketsSize.addAndGet(packetSize(p));
-    }
-
     static long packetSize(QuorumPacket p) {
         /* Approximate base size of QuorumPacket: int + long + byte[] + List */
         long size = 4 + 8 + 8 + 8;
@@ -1136,6 +1130,15 @@ public class LearnerHandler extends ZooKeeperThread {
             size += data.length;
         }
         return size;
+    }
+
+    void queuePacket(QuorumPacket p) {
+        queuedPackets.add(p);
+        // Add a MarkerQuorumPacket at regular intervals.
+        if (shouldSendMarkerPacketForLogging() && packetCounter.getAndIncrement() % markerPacketInterval == 0) {
+            queuedPackets.add(new MarkerQuorumPacket(System.nanoTime()));
+        }
+        queuedPacketsSize.addAndGet(packetSize(p));
     }
 
     public boolean synced() {

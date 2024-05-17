@@ -978,6 +978,7 @@ public class Leader extends LearnerMaster {
         // in order to be committed, a proposal must be accepted by a quorum.
         //
         // getting a quorum from all necessary configurations.
+        // 查看ack的数量是都达到大多数
         if (!p.hasAllQuorums()) {
             return false;
         }
@@ -1029,6 +1030,7 @@ public class Leader extends LearnerMaster {
             inform(p);
         }
         zk.commitProcessor.commit(p.request);
+        // 主节点提交了 就可以返回SYNC给Follower了
         if (pendingSyncs.containsKey(zxid)) {
             for (LearnerSyncRequest r : pendingSyncs.remove(zxid)) {
                 sendSync(r);

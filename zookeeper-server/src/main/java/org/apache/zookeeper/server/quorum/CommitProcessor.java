@@ -71,6 +71,12 @@ import org.slf4j.LoggerFactory;
  *   - Must ensure no race condition between writes in one session that would
  *     trigger a watch being set by a read request in another session
  *
+ * 维护一个线程池服务WorkerService，每个请求都在单独的线程中处理
+ *
+ * 每个session的请求必须按顺序执行
+ * 写请求必须按照zxid顺序执行
+ * 确认一个session中写请求之间没有竞争
+ *
  * The current implementation solves the third constraint by simply allowing no
  * read requests to be processed in parallel with write requests.
  */
@@ -79,6 +85,7 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
     private static final Logger LOG = LoggerFactory.getLogger(CommitProcessor.class);
 
     /** Default: numCores */
+    // work线程的数量 默认机器cpu核数
     public static final String ZOOKEEPER_COMMIT_PROC_NUM_WORKER_THREADS = "zookeeper.commitProcessor.numWorkerThreads";
     /** Default worker pool shutdown timeout in ms: 5000 (5s) */
     public static final String ZOOKEEPER_COMMIT_PROC_SHUTDOWN_TIMEOUT = "zookeeper.commitProcessor.shutdownTimeout";
@@ -112,7 +119,7 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
 
     /**
      * Requests that have been committed.
-     * 已经 COMMIT 的 Request
+     * 待 COMMIT 的 Request
      */
     protected final LinkedBlockingQueue<Request> committedRequests = new LinkedBlockingQueue<>();
 
@@ -218,8 +225,11 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
                  * the following two lines is important!).
                  */
                 synchronized (this) {
+                    // 是否有请求需要提交
                     commitIsWaiting = !committedRequests.isEmpty();
+                    // CommitProcessor在处理的请求
                     requestsToProcess = queuedRequests.size();
+                    // 如果queuedRequests = 0，而有commit请求在待处理 说明没有需要提交的请求 则wait，在commit的时候会wakeup即notifyAll
                     if (requestsToProcess == 0 && !commitIsWaiting) {
                         // Waiting for requests to process
                         while (!stopped && requestsToProcess == 0 && !commitIsWaiting) {
@@ -252,12 +262,14 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
                        && (maxReadBatchSize < 0 || readsProcessed <= maxReadBatchSize)
                        && (request = queuedRequests.poll()) != null) {
                     requestsToProcess--;
+                    // 事务请求 或者 sync请求的会话有事务请求还未处理完的 也会加入pendingRequests队列
                     if (needCommit(request) || pendingRequests.containsKey(request.sessionId)) {
                         // Add request to pending
                         Deque<Request> requests = pendingRequests.computeIfAbsent(request.sessionId, sid -> new ArrayDeque<>());
                         requests.addLast(request);
                         ServerMetrics.getMetrics().REQUESTS_IN_SESSION_QUEUE.add(requests.size());
                     } else {
+                        // 非事务请求
                         readsProcessed++;
                         numReadQueuedRequests.decrementAndGet();
                         sendToNextProcessor(request);
@@ -312,6 +324,7 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
                     while (commitIsWaiting && !stopped && commitsToProcess > 0) {
 
                         // Process committed head
+                        // 拿出commit请求
                         request = committedRequests.peek();
 
                         if (request.isThrottled()) {
@@ -326,6 +339,7 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
                          * a commit for a local write, as commits are received in order. Else
                          * it must be a commit for a remote write.
                          */
+                        // 校验事务请求
                         if (!queuedWriteRequests.isEmpty()
                             && queuedWriteRequests.peek().sessionId == request.sessionId
                             && queuedWriteRequests.peek().cxid == request.cxid) {
@@ -381,6 +395,7 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
                         commitsProcessed++;
 
                         // Process the write inline.
+                        // 处理写请求
                         processWrite(request);
 
                         commitIsWaiting = !committedRequests.isEmpty();
@@ -611,6 +626,7 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
         request.commitProcQueueStartTime = Time.currentElapsedTime();
         queuedRequests.add(request);
         // If the request will block, add it to the queue of blocking requests
+        // 事务的请求需要 commit
         if (needCommit(request)) {
             queuedWriteRequests.add(request);
             numWriteQueuedRequests.incrementAndGet();

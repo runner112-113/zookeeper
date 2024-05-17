@@ -118,6 +118,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     // 准备好bb
                     p.createBB();
                 }
+                // 发送客户端请求
                 sock.write(p.bb);
                 // 如果写完了
                 if (!p.bb.hasRemaining()) {

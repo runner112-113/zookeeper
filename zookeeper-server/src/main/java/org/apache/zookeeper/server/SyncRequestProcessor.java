@@ -57,6 +57,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
     private static final Request REQUEST_OF_DEATH = Request.requestOfDeath;
 
     /** The number of log entries to log before starting a snapshot */
+    // 生成snapshot的事务记录参数值，可在zoo.cfg中进行配置，即事务日志记录数大于等于snapCount的时候，进行snapshot文件的生成；
     private static int snapCount = ZooKeeperServer.getSnapCount();
 
     /**
@@ -67,6 +68,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
     /**
      * Random numbers used to vary snapshot timing
      */
+    // 生成snapshot的随机值，和snapcount配合使用
     private int randRoll;
     private long randSize;
 
@@ -83,6 +85,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
      * disk. Basically this is the list of SyncItems whose callbacks will be
      * invoked after flush returns successfully.
      */
+    // 待flush到磁盘的事务日志消息容器，包括增、删、改消息，查询类消息不进入该容器
     private final Queue<Request> toFlush;
     private long lastFlushTime;
 
@@ -142,9 +145,13 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
     }
 
     private boolean shouldSnapshot() {
+        // 事务数量
         int logCount = zks.getZKDatabase().getTxnCount();
+        // 事务总大小
         long logSize = zks.getZKDatabase().getTxnSize();
+        // 当前事务数量超过了配置的 snapCount 的一半再加上一个随机数 randRoll
         return (logCount > (snapCount / 2 + randRoll))
+                // 快照大小 snapSizeInBytes 大于0，并且当前事务总大小超过了配置的快照大小的一半再加上一个随机数 randSize
                || (snapSizeInBytes > 0 && logSize > (snapSizeInBytes / 2 + randSize));
     }
 
@@ -179,15 +186,18 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
                 ServerMetrics.getMetrics().SYNC_PROCESSOR_QUEUE_TIME.add(startProcessTime - si.syncQueueStartTime);
 
                 // track the number of records written to the log
+                // 事务消息 append(si) 返回true，否则返回false
                 if (!si.isThrottled() && zks.getZKDatabase().append(si)) {
                     if (shouldSnapshot()) {
                         resetSnapshotStats();
                         // roll the log
+                        // 切换事务日志文件
                         zks.getZKDatabase().rollLog();
                         // take a snapshot
                         if (!snapThreadMutex.tryAcquire()) {
                             LOG.warn("Too busy to snap, skipping");
                         } else {
+                            // 保证数据快照过程不影响ZooKeeper的主流程，创建一个单独的异步线程来进行数据快照
                             new ZooKeeperThread("Snapshot Thread") {
                                 public void run() {
                                     try {
@@ -233,6 +243,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
         ServerMetrics.getMetrics().BATCH_SIZE.add(toFlush.size());
 
         long flushStartTime = Time.currentElapsedTime();
+        // 消息进行刷盘至磁盘文件中
         zks.getZKDatabase().commit();
         ServerMetrics.getMetrics().SYNC_PROCESSOR_FLUSH_TIME.add(Time.currentElapsedTime() - flushStartTime);
 

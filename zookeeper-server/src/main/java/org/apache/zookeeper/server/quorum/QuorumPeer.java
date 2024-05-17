@@ -799,6 +799,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
      * The number of ticks that can pass between sending a request and getting
      * an acknowledgment
      */
+    // 从发送到响应的间隔时间
     protected volatile int syncLimit;
 
     /**
