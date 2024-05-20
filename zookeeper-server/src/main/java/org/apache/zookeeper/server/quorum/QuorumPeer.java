@@ -1566,7 +1566,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                     LOG.info("LOOKING");
                     ServerMetrics.getMetrics().LOOKING_COUNT.add(1);
 
-                    // readonly server
+                    // 首先判断只读模式是否打开，默认是false
                     if (Boolean.getBoolean("readonlymode.enabled")) {
                         LOG.info("Attempting to start ReadOnlyZooKeeperServer");
 
@@ -2360,6 +2360,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
 
     public long getCurrentEpoch() throws IOException {
         if (currentEpoch == -1) {
+            // 从currentEpoch文件中获取当前的epoch
             currentEpoch = readLongFromFile(CURRENT_EPOCH_FILENAME);
         }
         return currentEpoch;

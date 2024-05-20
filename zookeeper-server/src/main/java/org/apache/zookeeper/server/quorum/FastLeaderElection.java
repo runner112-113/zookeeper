@@ -981,7 +981,7 @@ public class FastLeaderElection implements Election {
                 // 逻辑时钟加1
                 logicalclock.incrementAndGet();
                 // 自己投给自己
-                updateProposal(getInitId(), getInitLastLoggedZxid(), getPeerEpoch());
+                updateProposal(/*myId*/getInitId(),/*zxid*/ getInitLastLoggedZxid(), /*epoch*/getPeerEpoch());
             }
 
             LOG.info(
