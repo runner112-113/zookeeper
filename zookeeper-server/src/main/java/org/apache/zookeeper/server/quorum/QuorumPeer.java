@@ -1222,15 +1222,19 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
         if (!getView().containsKey(myid)) {
             throw new RuntimeException("My id " + myid + " not in the peer list");
         }
+        // 加载数据到DataTree中 其中如果Follower已经ACK了但没有接收到COMMIT指令的事务消息也会恢复
         loadDataBase();
         startServerCnxnFactory();
         try {
+            // run command 的server
             adminServer.start();
         } catch (AdminServerException e) {
             LOG.warn("Problem starting AdminServer", e);
         }
+        // Leader选举的准备工作
         startLeaderElection();
         startJvmPauseMonitor();
+        // 启动线程（包含选举逻辑） QuorumPeer 是一个线程
         super.start();
     }
 
@@ -1550,6 +1554,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
         try {
             /*
              * Main loop
+             * election logic
              */
             while (running) {
                 if (unavailableStartTime == 0) {
