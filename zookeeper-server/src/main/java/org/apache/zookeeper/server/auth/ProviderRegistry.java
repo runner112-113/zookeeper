@@ -44,14 +44,17 @@ public class ProviderRegistry {
 
     public static void initialize() {
         synchronized (ProviderRegistry.class) {
+            // ip
             IPAuthenticationProvider ipp = new IPAuthenticationProvider();
             authenticationProviders.put(ipp.getScheme(), ipp);
 
+            // digest
             if (DigestAuthenticationProvider.isEnabled()) {
                 DigestAuthenticationProvider digp = new DigestAuthenticationProvider();
                 authenticationProviders.put(digp.getScheme(), digp);
             }
 
+            // 通过 zookeeper.authProvider 系统属性配置的 自定义authProvider
             Enumeration<Object> en = System.getProperties().keys();
             while (en.hasMoreElements()) {
                 String k = (String) en.nextElement();

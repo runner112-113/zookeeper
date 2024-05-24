@@ -35,7 +35,9 @@ public class ZooKeeperOptions {
     private final Watcher defaultWatcher;
     private final Function<Collection<InetSocketAddress>, HostProvider> hostProvider;
     private final boolean canBeReadOnly;
+    // 会话id
     private final long sessionId;
+    // 会话秘钥
     private final byte[] sessionPasswd;
     private final ZKClientConfig clientConfig;
 

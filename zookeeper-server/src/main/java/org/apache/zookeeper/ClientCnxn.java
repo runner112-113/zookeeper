@@ -101,7 +101,12 @@ import org.slf4j.MDC;
  * This class manages the socket i/o for the client. ClientCnxn maintains a list
  * of available servers to connect to and "transparently" switches servers it is
  * connected to as needed.
- *
+ * 用户端核心线程，
+ * 其内部又包含两个线程，即SendThread和EventThread。
+ * 前者是一个I/O线程，主要负责ZooKeeper客户端和服务端之间的网络1/O通信；
+ * 后者是一个事件线程，主要负责对服务端事件进行处理。
+ * SendThread ---> I/0线程
+ * EventThread  ---> 负责对服务端事件进行处理
  */
 @SuppressFBWarnings({"EI_EXPOSE_REP", "EI_EXPOSE_REP2"})
 public class ClientCnxn {
@@ -308,6 +313,10 @@ public class ClientCnxn {
             this.watchRegistration = watchRegistration;
         }
 
+        /**
+         * 只序列化了requestHeader、request 并没哟序列化watchRegistration
+         * 但是整个Packet 对象是暂存在pending queue中的
+         */
         public void createBB() {
             try {
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -491,6 +500,7 @@ public class ClientCnxn {
             }
             sessionState = event.getState();
             final Set<Watcher> watchers;
+            // 根据该通知事件从ZKwatchManager中取出所有相关的Watcher
             if (materializedWatchers == null) {
                 // materialize the watchers based on the event
                 watchers = watchManager.materialize(event.getState(), event.getType(), event.getPath());
@@ -499,6 +509,7 @@ public class ClientCnxn {
             }
             WatcherSetEventPair pair = new WatcherSetEventPair(watchers, event);
             // queue the pair (watch set & event) for later processing
+            // 加入waitingEvents，EventThread#run loop handle
             waitingEvents.add(pair);
         }
 
@@ -553,6 +564,10 @@ public class ClientCnxn {
             LOG.info("EventThread shut down for session: 0x{}", Long.toHexString(getSessionId()));
         }
 
+        /**
+         * 事件的处理逻辑  EventThread
+         * @param event
+         */
         private void processEvent(Object event) {
             try {
                 if (event instanceof WatcherSetEventPair) {
@@ -717,6 +732,7 @@ public class ClientCnxn {
     // @VisibleForTesting
     protected void finishPacket(Packet p) {
         int err = p.replyHeader.getErr();
+        // 请求处理成功了 才添加Watcher
         if (p.watchRegistration != null) {
             p.watchRegistration.register(err);
         }
@@ -873,6 +889,7 @@ public class ClientCnxn {
                     eventThread.queueEventOfDeath();
                 }
               return;
+                // 通知
             case NOTIFICATION_XID:
                 LOG.debug("Got notification session id: 0x{}",
                     Long.toHexString(sessionId));
@@ -881,6 +898,7 @@ public class ClientCnxn {
 
                 WatchedEvent we = new WatchedEvent(event, replyHdr.getZxid());
                 LOG.debug("Got {} for session id 0x{}", we, Long.toHexString(sessionId));
+                // 交给事件线程处理
                 eventThread.queueEvent(we);
                 return;
             default:
@@ -909,6 +927,7 @@ public class ClientCnxn {
              * to the first request!
              */
             try {
+                // 确保请求的顺序执行
                 if (packet.requestHeader.getXid() != replyHdr.getXid()) {
                     packet.replyHeader.setErr(KeeperException.Code.CONNECTIONLOSS.intValue());
                     throw new IOException("Xid out of order. Got Xid " + replyHdr.getXid()

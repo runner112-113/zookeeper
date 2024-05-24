@@ -43,6 +43,7 @@ import org.slf4j.LoggerFactory;
  * This is the structure that represents a request moving through a chain of
  * RequestProcessors. There are various pieces of information that is tacked
  * onto the request as it is processed.
+ * 请求体
  */
 public class Request {
     private static final Logger LOG = LoggerFactory.getLogger(Request.class);

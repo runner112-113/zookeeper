@@ -384,6 +384,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
             nodeRecord = getRecordForPath(path);
             zks.checkACL(request.cnxn, nodeRecord.acl, ZooDefs.Perms.WRITE, request.authInfo, path, null);
             zks.checkQuota(path, nodeRecord.data, setDataRequest.getData(), OpCode.setData);
+            // 校验并递增version
             int newVersion = checkAndIncVersion(nodeRecord.stat.getVersion(), setDataRequest.getVersion(), path);
             request.setTxn(new SetDataTxn(path, setDataRequest.getData(), newVersion));
             nodeRecord = nodeRecord.duplicate(request.getHdr().getZxid());
@@ -734,6 +735,9 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
     }
 
     private static int checkAndIncVersion(int currentVersion, int expectedVersion, String path) throws KeeperException.BadVersionException {
+        // ZooKeeper会从setDataRequest请求中获取到当前请求的版本version，同时从数据记录nodeRecord中获取到当前服务器上该数据的最新版本currentVersion。
+        // 如果version为“-1”，那么说明客户端并不要求使用乐观锁，可以忽略版本比对；
+        // 如果version不是“-1”，那么就比对version和currentVersion，如果两个版本不匹配，那么将会抛出BadVersionException异常。
         if (expectedVersion != -1 && expectedVersion != currentVersion) {
             throw new KeeperException.BadVersionException(path);
         }

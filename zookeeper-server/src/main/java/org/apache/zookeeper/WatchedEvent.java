@@ -33,8 +33,11 @@ import org.apache.zookeeper.proto.WatcherEvent;
 public class WatchedEvent {
     public static final long NO_ZXID = -1L;
 
+    // 通知状态
     private final KeeperState keeperState;
+    // 事件类型
     private final EventType eventType;
+    // 结点路径
     private final String path;
     private final long zxid;
 

@@ -719,6 +719,7 @@ public class NIOServerCnxn extends ServerCnxn {
             }
             return;
         }
+        // NOTIFICATION_XID 表明这是一个通知
         ReplyHeader h = new ReplyHeader(ClientCnxn.NOTIFICATION_XID, event.getZxid(), 0);
         if (LOG.isTraceEnabled()) {
             ZooTrace.logTraceMessage(
@@ -728,11 +729,13 @@ public class NIOServerCnxn extends ServerCnxn {
         }
 
         // Convert WatchedEvent to a type that can be sent over the wire
+        // 将WatchedEvent封装为WatcherEvent（可序列化）
         WatcherEvent e = event.getWrapper();
 
         // The last parameter OpCode here is used to select the response cache.
         // Passing OpCode.error (with a value of -1) means we don't care, as we don't need
         // response cache on delivering watcher events.
+        // 发送通知
         int responseSize = sendResponse(h, e, "notification", null, null, ZooDefs.OpCode.error);
         ServerMetrics.getMetrics().WATCH_BYTES.add(responseSize);
     }

@@ -48,6 +48,11 @@ public final class ConnectStringParser {
      * with support for IPv6 literals
      * @throws IllegalArgumentException
      *             for an invalid chroot path.
+     *
+     * 可以在connectString中设置客户端连接上ZooKeeper后的根目录，
+     * 方法是在host：port字符串之后添加上这个根目录，例如，192.168.1.1:2181，192.168.1.2:2181，192.168.1.3:2181/zk-book，
+     * 这样就指定了该客户端连接上ZooKeeper服务器之后，所有对ZooKeeper的操作，都会基于这个根目录。
+     * 例如，客户端对/foo/bar的操作，都会指向节点/zk-book/foo/bar这个目录也叫Chroot，即客户端隔离命名空间
      */
     public ConnectStringParser(String connectString) {
         // parse out chroot, if any

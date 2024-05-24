@@ -106,14 +106,19 @@ public class ZooDefs {
     @InterfaceAudience.Public
     public interface Perms {
 
+        // 数据节点的读取权限，允许授权对象访问该数据节点并读取其数据内容或子节点列表等
         int READ = 1 << 0;
 
+        // 数据节点的更新权限，允许授权对象对该数据节点进行更新操作。
         int WRITE = 1 << 1;
 
+        // 数据节点的创建权限，允许授权对象在该数据节点下创建子节点
         int CREATE = 1 << 2;
 
+        // 数据节点的删除权限，允许授权对象删除该数据节点的子节点。
         int DELETE = 1 << 3;
 
+        // 数据节点的管理权限，允许授权对象对该数据节点进行ACL相关的设置操作。
         int ADMIN = 1 << 4;
 
         int ALL = READ | WRITE | CREATE | DELETE | ADMIN;

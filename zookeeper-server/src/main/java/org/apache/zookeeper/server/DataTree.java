@@ -104,8 +104,10 @@ public class DataTree {
      */
     private final NodeHashMap nodes;
 
+    // 数据变更的Watcher
     private IWatchManager dataWatches;
 
+    // 节点变更的Watcher
     private IWatchManager childWatches;
 
     /** cached total size of paths and data for all DataNodes */
@@ -661,6 +663,7 @@ public class DataTree {
         nodeDataSize.addAndGet(getNodeSize(path, data) - getNodeSize(path, lastData));
 
         updateWriteStat(path, dataBytes);
+        // 触发Watcher
         dataWatches.triggerWatch(path, EventType.NodeDataChanged, zxid, acl);
         return s;
     }

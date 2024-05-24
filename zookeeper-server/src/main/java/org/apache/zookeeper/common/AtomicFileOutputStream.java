@@ -76,7 +76,9 @@ public class AtomicFileOutputStream extends FilterOutputStream {
     public void close() throws IOException {
         boolean triedToClose = false, success = false;
         try {
+            // 将数据从Java的缓冲区写入操作系统的缓存
             flush();
+            // sync确保这些数据被真正写入到物理磁盘中
             ((FileOutputStream) out).getFD().sync();
 
             triedToClose = true;

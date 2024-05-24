@@ -161,6 +161,7 @@ public class QuorumPeerMain {
         }
         try {
             ServerMetrics.metricsProviderInitialized(metricsProvider);
+            // 初始化ACL Provider
             ProviderRegistry.initialize();
             ServerCnxnFactory cnxnFactory = null;
             ServerCnxnFactory secureCnxnFactory = null;

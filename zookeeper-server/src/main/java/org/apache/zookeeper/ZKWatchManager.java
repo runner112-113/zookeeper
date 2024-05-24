@@ -38,6 +38,7 @@ class ZKWatchManager implements ClientWatchManager {
 
     private static final Logger LOG = LoggerFactory.getLogger(ZKWatchManager.class);
 
+    // key为路径，value为Watcher集合
     private final Map<String, Set<Watcher>> dataWatches = new HashMap<>();
     private final Map<String, Set<Watcher>> existWatches = new HashMap<>();
     private final Map<String, Set<Watcher>> childWatches = new HashMap<>();
@@ -340,6 +341,9 @@ class ZKWatchManager implements ClientWatchManager {
     /* (non-Javadoc)
      * @see org.apache.zookeeper.ClientWatchManager#materialize(Event.KeeperState,
      *                                                        Event.EventType, java.lang.String)
+     *
+     * 根据该通知事件从ZKwatchManager中取出所有相关的Watcher
+     * 通过remove方法获取的 所以是一次有效
      */
     @Override
     public Set<Watcher> materialize(

@@ -488,6 +488,9 @@ public class Leader extends LearnerMaster {
     // VisibleForTesting
     protected final Proposal newLeaderProposal = new Proposal();
 
+    /**
+     * LearnerCnxAcceptor  Acceptor
+     */
     class LearnerCnxAcceptor extends ZooKeeperCriticalThread {
 
         private final AtomicBoolean stop = new AtomicBoolean(false);
@@ -566,6 +569,7 @@ public class Leader extends LearnerMaster {
                 Socket socket = null;
                 boolean error = false;
                 try {
+                    // 等待建立连接
                     socket = serverSocket.accept();
 
                     // start with the initLimit, once the ack is processed
@@ -1483,6 +1487,7 @@ public class Leader extends LearnerMaster {
             // 超过一半的follower发送FOLLOWERINFO过来才可以
             if (connectingFollowers.contains(self.getMyId()) && verifier.containsQuorum(connectingFollowers)) {
                 waitingForNewEpoch = false;
+                // 将epoch写入acceptEpoch
                 self.setAcceptedEpoch(epoch);
                 connectingFollowers.notifyAll();
             } else {

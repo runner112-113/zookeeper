@@ -285,6 +285,7 @@ public class ZooKeeper implements AutoCloseable {
          * add the watch on the path.
          */
         public void register(int rc) {
+            // 只有请求返回OK的时候才会进行注册
             if (shouldAddWatch(rc)) {
                 Map<String, Set<Watcher>> watches = getWatches(rc);
                 synchronized (watches) {
@@ -1244,8 +1245,8 @@ public class ZooKeeper implements AutoCloseable {
      *
      * This method is NOT thread safe
      *
-     * @param scheme
-     * @param auth
+     * @param scheme  权限控制模式，分为world、auth、digest、ip和super
+     * @param auth    具体的权限信息
      */
     public void addAuthInfo(String scheme, byte[] auth) {
         cnxn.addAuthInfo(scheme, auth);
@@ -1999,6 +2000,7 @@ public class ZooKeeper implements AutoCloseable {
 
         WatchRegistration wcb = null;
         if (watcher != null) {
+            // 会在请求处理成功了(即finishPackage) 才添加Watcher
             wcb = new DataWatchRegistration(watcher, clientPath);
         }
 

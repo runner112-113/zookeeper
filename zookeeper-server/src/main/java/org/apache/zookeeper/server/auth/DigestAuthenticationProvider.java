@@ -57,6 +57,8 @@ public class DigestAuthenticationProvider implements AuthenticationProvider {
      * "zookeeper.DigestAuthenticationProvider.superDigest"
      * and value of "super:&lt;base64encoded(SHA1(password))&gt;" to enable
      * super user access (i.e. acls disabled)
+     *
+     * Super模式  超管
      */
     private static final String superDigest = System.getProperty("zookeeper.DigestAuthenticationProvider.superDigest");
 
@@ -117,7 +119,9 @@ public class DigestAuthenticationProvider implements AuthenticationProvider {
 
     public static String generateDigest(String idPassword) throws NoSuchAlgorithmException {
         String[] parts = idPassword.split(":", 2);
+        // SHA-1
         byte[] digest = digest(idPassword);
+        // Base64
         return parts[0] + ":" + base64Encode(digest);
     }
 

@@ -47,8 +47,11 @@ public class WatchManager implements IWatchManager {
 
     private static final Logger LOG = LoggerFactory.getLogger(WatchManager.class);
 
+    // 数据节点路径的粒度来托管Watcher
+    // 即：节点路径 ---> Watcher集合
     private final Map<String, Set<Watcher>> watchTable = new HashMap<>();
 
+    // Watcher的粒度来控制事件触发需要触发的数据节点
     private final Map<Watcher, Map<String, WatchStats>> watch2Paths = new HashMap<>();
 
     private int recursiveWatchQty = 0;
@@ -138,10 +141,12 @@ public class WatchManager implements IWatchManager {
 
     @Override
     public WatcherOrBitSet triggerWatch(String path, EventType type, long zxid, List<ACL> acl, WatcherOrBitSet supress) {
+        // 1.封装WatchedEvent
         WatchedEvent e = new WatchedEvent(type, KeeperState.SyncConnected, path, zxid);
         Set<Watcher> watchers = new HashSet<>();
         synchronized (this) {
             PathParentIterator pathParentIterator = getPathParentIterator(path);
+            // 2.查询Watcher
             for (String localPath : pathParentIterator.asIterable()) {
                 Set<Watcher> thisWatchers = watchTable.get(localPath);
                 if (thisWatchers == null || thisWatchers.isEmpty()) {
@@ -181,6 +186,7 @@ public class WatchManager implements IWatchManager {
             return null;
         }
 
+        // 3.调用process 方法来触发Watcher
         for (Watcher w : watchers) {
             if (supress != null && supress.contains(w)) {
                 continue;
