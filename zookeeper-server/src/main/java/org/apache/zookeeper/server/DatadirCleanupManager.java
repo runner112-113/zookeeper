@@ -31,6 +31,8 @@ import org.slf4j.LoggerFactory;
  * 'autopurge.purgeInterval'. It keeps the most recent
  * 'autopurge.snapRetainCount' number of snapshots and corresponding transaction
  * logs.
+ *
+ * 历史文件清理器
  */
 public class DatadirCleanupManager {
 

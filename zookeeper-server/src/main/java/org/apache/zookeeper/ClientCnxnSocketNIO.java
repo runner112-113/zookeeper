@@ -64,6 +64,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
     /**
      * @throws InterruptedException
      * @throws IOException
+     * 责对请求的发送和响应接收过程
      */
     void doIO(Queue<Packet> pendingQueue, ClientCnxn cnxn) throws InterruptedException, IOException {
         SocketChannel sock = (SocketChannel) sockKey.channel();
@@ -82,7 +83,10 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                 if (incomingBuffer == lenBuffer) {
                     recvCount.getAndIncrement();
                     readLength();
+
+                    // 判断当前的客户端状态是否是已初始化
                 } else if (!initialized) {
+                    // 尚未完成初始化，那么就认为该响应一定是会话创建请求的响应，直接交由readConnectResult方法来处理该响应
                     readConnectResult();
                     enableRead();
                     if (findSendablePacket(outgoingQueue, sendThread.tunnelAuthInProgress()) != null) {
@@ -162,6 +166,14 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
         }
     }
 
+    /**
+     * 在outgoingQueue队列中的Packet整体上是按照先进先出的顺序被处理的，
+     * 但是如果检测到客户端与服务端之间正在处理SASL权限的话，
+     * 那么那些不含请求头（requestHeader）的Packet（例如会话创建请求）是可以被发送的，其余的都无法被发送。
+     * @param outgoingQueue
+     * @param tunneledAuthInProgres
+     * @return
+     */
     private Packet findSendablePacket(LinkedBlockingDeque<Packet> outgoingQueue, boolean tunneledAuthInProgres) {
         if (outgoingQueue.isEmpty()) {
             return null;

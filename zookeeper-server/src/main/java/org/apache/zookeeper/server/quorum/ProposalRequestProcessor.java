@@ -29,6 +29,11 @@ import org.slf4j.LoggerFactory;
 /**
  * This RequestProcessor simply forwards requests to an AckRequestProcessor and
  * SyncRequestProcessor.
+ *
+ * ProposalRequestProcessor处理器是Leader服务器的事务投票处理器，也是Leader服务器事务处理流程的发起者。
+ * 对于非事务请求，ProposalRequestProcessor会直接将请求流转到CommitProcessor处理器，不再做其他处理；而对于事务请求，
+ * 除了将请求交给CommitProcessor处理器外，还会根据请求类型创建对应的Proposal提议，并发送给所有的Follower 服务器来发起一次集群内的事务投票。
+ * 同时，ProposaLRequestProcessor还会将事务请求交付给 SyncRequestProcessor进行事务日志的记录。
  */
 public class ProposalRequestProcessor implements RequestProcessor {
 

@@ -152,6 +152,7 @@ public class DataTree {
 
     /**
      * This hashtable lists the paths of the ephemeral nodes of a session.
+     * 临时节点
      */
     private final Map<Long, HashSet<String>> ephemerals = new ConcurrentHashMap<>();
 

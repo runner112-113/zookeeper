@@ -273,19 +273,22 @@ public class ClientCnxn {
      */
     static class Packet {
 
+        // 请求头
         RequestHeader requestHeader;
-
+        // 响应头
         ReplyHeader replyHeader;
-
+        // 请求体
         Record request;
-
+        // 响应体
         Record response;
 
         ByteBuffer bb;
 
         /** Client's view of the path (may differ due to chroot) **/
+        // 节点路径
         String clientPath;
         /** Servers's view of the path (may differ due to chroot) **/
+        // 节点路径
         String serverPath;
 
         boolean finished;
@@ -293,7 +296,7 @@ public class ClientCnxn {
         AsyncCallback cb;
 
         Object ctx;
-
+        // 注册的Watcher
         WatchRegistration watchRegistration;
 
         WatchDeregistration watchDeregistration;
@@ -314,6 +317,7 @@ public class ClientCnxn {
         }
 
         /**
+         * 序列化逻辑
          * 只序列化了requestHeader、request 并没哟序列化watchRegistration
          * 但是整个Packet 对象是暂存在pending queue中的
          */
@@ -428,6 +432,7 @@ public class ClientCnxn {
         this.connectTimeout = sessionTimeout / hostProvider.size();
         this.readTimeout = sessionTimeout * 2 / 3;
 
+        // 构建send和event线程
         this.sendThread = new SendThread(clientCnxnSocket);
         this.eventThread = new EventThread();
         initRequestTimeout();
@@ -874,6 +879,8 @@ public class ClientCnxn {
             ReplyHeader replyHdr = new ReplyHeader();
 
             replyHdr.deserialize(bbia, "header");
+
+            // 接收到服务器的响应是一个事件
             switch (replyHdr.getXid()) {
             case PING_XID:
                 LOG.debug("Got ping response for session id: 0x{} after {}ms.",
@@ -915,6 +922,8 @@ public class ClientCnxn {
                 return;
             }
 
+
+            // 接收到服务器的响应是一个常规响应（指的是Create、GetData和Exist等操作请求）
             Packet packet;
             synchronized (pendingQueue) {
                 if (pendingQueue.size() == 0) {
@@ -995,6 +1004,7 @@ public class ClientCnxn {
                 clientCnxnSocket.getRemoteSocketAddress());
             isFirstConnect = false;
             long sessId = (seenRwServerBefore) ? sessionId : 0;
+            // 构造ConnectRequest ---> 该请求代表了客户端试图与服务器创建一个会话
             ConnectRequest conReq = new ConnectRequest(0, lastZxid, sessionTimeout, sessId, sessionPasswd, readOnly);
             // We add backwards since we are pushing into the front
             // Only send if there's a pending watch
@@ -1066,6 +1076,7 @@ public class ClientCnxn {
                 }
             }
 
+            // ACL信息
             for (AuthData id : authInfo) {
                 outgoingQueue.addFirst(
                     new Packet(
@@ -1076,6 +1087,7 @@ public class ClientCnxn {
                         null));
             }
             outgoingQueue.addFirst(new Packet(null, null, conReq, null, null));
+            // NIO 在此处设置了感兴趣的事件 SelectionKey.OP_READ | SelectionKey.OP_WRITE
             clientCnxnSocket.connectionPrimed();
             LOG.debug("Session establishment request sent on {}", clientCnxnSocket.getRemoteSocketAddress());
         }
@@ -1165,10 +1177,11 @@ public class ClientCnxn {
                             serverAddress = rwServerAddress;
                             rwServerAddress = null;
                         } else {
+                            // hostProvider中随机获取一个地址
                             serverAddress = hostProvider.next(1000);
                         }
                         onConnecting(serverAddress);
-                        // 建立socket连接
+                        // 建立socket连接 TCP长连接
                         startConnect(serverAddress);
                         // Update now to start the connection timer right after we make a connection attempt
                         clientCnxnSocket.updateNow();
@@ -1230,7 +1243,7 @@ public class ClientCnxn {
                                              - ((clientCnxnSocket.getIdleSend() > 1000) ? 1000 : 0);
                         //send a ping request either time is due or no packet sent out within MAX_SEND_PING_INTERVAL
                         if (timeToNextPing <= 0 || clientCnxnSocket.getIdleSend() > MAX_SEND_PING_INTERVAL) {
-                            // 发送心跳
+                            // 发送心跳 保持连接
                             sendPing();
                             clientCnxnSocket.updateLastSend();
                         } else {
@@ -1406,9 +1419,11 @@ public class ClientCnxn {
 
             readTimeout = negotiatedSessionTimeout * 2 / 3;
             connectTimeout = negotiatedSessionTimeout / hostProvider.size();
+            // 通知hostProvider连接成功
             hostProvider.onConnected();
             sessionId = _sessionId;
             sessionPasswd = _sessionPasswd;
+            // 改变连接状态
             changeZkState((isRO) ? States.CONNECTEDREADONLY : States.CONNECTED);
             seenRwServerBefore |= !isRO;
             LOG.info(
@@ -1417,6 +1432,7 @@ public class ClientCnxn {
                 Long.toHexString(sessionId),
                 negotiatedSessionTimeout,
                 (isRO ? " (READ-ONLY mode)" : ""));
+            // 生成SyncConnected-None事件：代表客户端与服务器会话创建成功
             KeeperState eventState = (isRO) ? KeeperState.ConnectedReadOnly : KeeperState.SyncConnected;
             eventThread.queueEvent(new WatchedEvent(Watcher.Event.EventType.None, eventState, null));
         }

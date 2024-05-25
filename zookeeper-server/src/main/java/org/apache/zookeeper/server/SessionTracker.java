@@ -29,6 +29,8 @@ import org.apache.zookeeper.KeeperException.SessionExpiredException;
  * standalone and leader ZooKeeperServer use the same SessionTracker. The
  * FollowerZooKeeperServer uses a SessionTracker which is basically a simple
  * shell to track information to be forwarded to the leader.
+ *
+ * 会话管理器
  */
 public interface SessionTracker {
 

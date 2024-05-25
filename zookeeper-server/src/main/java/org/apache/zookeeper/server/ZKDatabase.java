@@ -68,6 +68,11 @@ import org.slf4j.LoggerFactory;
  * server states that includes the sessions, datatree and the
  * committed logs. It is booted up  after reading the logs
  * and snapshots from the disk.
+ *
+ *
+ * ZKDatabase，正如其名字一样，是ZooKeeper的内存数据库，负责管理ZooKeeper的所有会话、DataTree存储和事务日志。
+ * ZKDatabase会定时向磁盘dump快照数据，同时在ZooKeeper服务器启动的时候，
+ * 会通过磁盘上的事务日志和快照数据文件恢复成一个完整的内存数据库。
  */
 public class ZKDatabase {
 
@@ -272,6 +277,10 @@ public class ZKDatabase {
 
     private final PlayBackListener commitProposalPlaybackListener = new PlayBackListener() {
         public void onTxnLoaded(TxnHeader hdr, Record txn, TxnDigest digest) {
+            /**
+             * 每当有一个事务被应用到内存数据库中去后，ZooKeeper同时会回调PlayBackListener监听器，
+             * 将这一事务操作记录转换成Proposal，并保存到ZKDatabase.committedLog中，以便Follower进行快速同步。
+             */
             addCommittedProposal(hdr, txn, digest);
         }
     };

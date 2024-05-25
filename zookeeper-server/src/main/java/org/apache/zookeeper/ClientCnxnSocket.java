@@ -140,10 +140,12 @@ abstract class ClientCnxnSocket {
 
         ByteBufferInputStream bbis = new ByteBufferInputStream(incomingBuffer);
         BinaryInputArchive bbia = BinaryInputArchive.getArchive(bbis);
+        // 序列化为ConnectResponse
         ConnectResponse conRsp = protocolManager.deserializeConnectResponse(bbia);
         if (!protocolManager.isReadonlyAvailable()) {
             LOG.warn("Connected to an old server; r-o mode will be unavailable");
         }
+        // 获取到zookeeper服务端分配额会话sessionId
         this.sessionId = conRsp.getSessionId();
         sendThread.onConnected(conRsp.getTimeOut(), this.sessionId, conRsp.getPasswd(), conRsp.getReadOnly());
     }

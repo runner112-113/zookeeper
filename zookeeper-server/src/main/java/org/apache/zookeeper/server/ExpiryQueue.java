@@ -84,6 +84,7 @@ public class ExpiryQueue<E> {
     public Long update(E elem, int timeout) {
         Long prevExpiryTime = elemMap.get(elem);
         long now = Time.currentElapsedTime();
+        // 转化为 会话检查周期的整数倍 ---> 目的是为了同时对多个会话进行检查
         Long newExpiryTime = roundToNextInterval(now + timeout);
 
         if (newExpiryTime.equals(prevExpiryTime)) {

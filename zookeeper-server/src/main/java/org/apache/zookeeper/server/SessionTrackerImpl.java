@@ -46,10 +46,14 @@ public class SessionTrackerImpl extends ZooKeeperCriticalThread implements Sessi
 
     private static final Logger LOG = LoggerFactory.getLogger(SessionTrackerImpl.class);
 
+
+    // sessionId --> Session
     protected final ConcurrentHashMap<Long, SessionImpl> sessionsById = new ConcurrentHashMap<>();
 
+    // 会话超时管理
     private final ExpiryQueue<SessionImpl> sessionExpiryQueue;
 
+    // 根据sessionID来管理会话的超时时间。该数据结构和ZooKeeper内存数据库相连通，会被定期持久化到快照文件中去
     protected final ConcurrentMap<Long, Integer> sessionsWithTimeout;
     private final AtomicLong nextSessionId = new AtomicLong();
 
@@ -94,9 +98,11 @@ public class SessionTrackerImpl extends ZooKeeperCriticalThread implements Sessi
      *
      * @param id server Id
      * @return the session Id
+     * 单机唯一的序列号的生成：高8位确定了所在的机器，低56位使用当前时间的毫秒表示进行随机
      */
     public static long initializeNextSessionId(long id) {
         long nextSid;
+        // 采用无符号右移 保证正数
         nextSid = (Time.currentElapsedTime() << 24) >>> 8;
         nextSid = nextSid | (id << 56);
         if (nextSid == EphemeralType.CONTAINER_EPHEMERAL_OWNER) {
@@ -112,6 +118,7 @@ public class SessionTrackerImpl extends ZooKeeperCriticalThread implements Sessi
         this.expirer = expirer;
         this.sessionExpiryQueue = new ExpiryQueue<>(tickTime);
         this.sessionsWithTimeout = sessionsWithTimeout;
+        // 初始化sessionId
         this.nextSessionId.set(initializeNextSessionId(serverId));
         for (Entry<Long, Integer> e : sessionsWithTimeout.entrySet()) {
             trackSession(e.getKey(), e.getValue());
@@ -154,10 +161,14 @@ public class SessionTrackerImpl extends ZooKeeperCriticalThread implements Sessi
         return sw.toString();
     }
 
+    /**
+     * 会话清理过程
+     */
     @Override
     public void run() {
         try {
             while (running) {
+                // 等待下一个检测点
                 long waitTime = sessionExpiryQueue.getWaitTime();
                 if (waitTime > 0) {
                     Thread.sleep(waitTime);
@@ -166,7 +177,10 @@ public class SessionTrackerImpl extends ZooKeeperCriticalThread implements Sessi
 
                 for (SessionImpl s : sessionExpiryQueue.poll()) {
                     ServerMetrics.getMetrics().STALE_SESSIONS_EXPIRED.add(1);
+                    // 标记isClosing为true：使在会话清理期间接收到该客户端的新请求，也无法继续处理了。
                     setSessionClosing(s.sessionId);
+                    // 为了使对该会话的关闭操作在整个服务端集群中都生效，
+                    // ZooKeeper使用了提交“会话关闭”请求的方式，并立即交付给PrepRequestProcessor处理器进行处理。
                     expirer.expire(s);
                 }
             }
@@ -189,6 +203,7 @@ public class SessionTrackerImpl extends ZooKeeperCriticalThread implements Sessi
             return false;
         }
 
+        // 更新超时时间
         updateSessionExpiry(s, timeout);
         return true;
     }

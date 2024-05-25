@@ -745,6 +745,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
         start();
         setZooKeeperServer(zks);
         if (startServer) {
+            // 每次在ZooKeeper启动的时候，都需要从本地快照数据文件和事务日志文件中进行数据恢复
             zks.startdata();
             zks.startup();
         }

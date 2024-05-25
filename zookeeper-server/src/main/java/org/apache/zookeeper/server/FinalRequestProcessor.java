@@ -94,6 +94,9 @@ import org.slf4j.LoggerFactory;
  *
  * This RequestProcessor counts on ZooKeeperServer to populate the
  * outstandingRequests member of ZooKeeperServer.
+ *
+ * FinalRequestProcessor是最后一个请求处理器。该处理器主要用来进行客户端请求返回之前的收尾工作，
+ * 包括创建客户端请求的响应；针对事务请求，该处理器还会负责将事务应用到内存数据库中去。
  */
 public class FinalRequestProcessor implements RequestProcessor {
 

@@ -1100,6 +1100,7 @@ public class ZooKeeper implements AutoCloseable {
         this.clientConfig = clientConfig != null ? clientConfig : new ZKClientConfig();
         ConnectStringParser connectStringParser = new ConnectStringParser(connectString);
         HostProvider hostProvider;
+        // 对于构造方法中传入的服务器地址，客户端会将其存放在服务器地址列表管理器HostProvider中
         if (options.getHostProvider() != null) {
             hostProvider = options.getHostProvider().apply(connectStringParser.getServerAddresses());
         } else {
@@ -1108,16 +1109,19 @@ public class ZooKeeper implements AutoCloseable {
         this.hostProvider = hostProvider;
 
         chroot = Chroot.ofNullable(connectStringParser.getChrootPath());
+        // 创建一个网络连接器ClientCnxn，用来管理客户端与服务器的网络交互
         cnxn = createConnection(
             hostProvider,
             sessionTimeout,
             this.clientConfig,
             watcher,
+            // 创建ClientCnxnSocket处理器
             getClientCnxnSocket(),
             sessionId,
             sessionPasswd,
             canBeReadOnly);
         cnxn.seenRwServerBefore = sessionId != 0; // since user has provided sessionId
+        // 启动send和event线程
         cnxn.start();
     }
 
@@ -3076,6 +3080,7 @@ public class ZooKeeper implements AutoCloseable {
      * @throws IOException
      */
     private ClientCnxnSocket getClientCnxnSocket() throws IOException {
+        // zookeeper.clientCnxnSocket
         String clientCnxnSocketName = getClientConfig().getProperty(ZKClientConfig.ZOOKEEPER_CLIENT_CNXN_SOCKET);
         if (clientCnxnSocketName == null || clientCnxnSocketName.equals(ClientCnxnSocketNIO.class.getSimpleName())) {
             clientCnxnSocketName = ClientCnxnSocketNIO.class.getName();

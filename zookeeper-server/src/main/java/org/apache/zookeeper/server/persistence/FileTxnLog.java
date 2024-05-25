@@ -154,6 +154,9 @@ public class FileTxnLog implements TxnLog, Closeable {
     File logDir;
     private final boolean forceSync = !System.getProperty("zookeeper.forceSync", "yes").equals("no");
     long dbId;
+    /**
+     * ZooKeeper用来记录当前需要强制进行数据落盘（将数据强制刷入磁盘上）的文件流
+     */
     private final Queue<FileOutputStream> streamsToFlush = new ArrayDeque<>();
     File logFileWrite = null;
     private FilePadding filePadding = new FilePadding();
@@ -287,6 +290,7 @@ public class FileTxnLog implements TxnLog, Closeable {
             fos = new FileOutputStream(logFileWrite);
             logStream = new BufferedOutputStream(fos);
             oa = BinaryOutputArchive.getArchive(logStream);
+            // 构建日志文件头信息
             FileHeader fhdr = new FileHeader(TXNLOG_MAGIC, VERSION, dbId);
             long dataSize = oa.getDataSize();
             fhdr.serialize(oa, "fileheader");
@@ -300,6 +304,7 @@ public class FileTxnLog implements TxnLog, Closeable {
             filePadding.setCurrentSize(filePosition);
             streamsToFlush.add(fos);
         }
+        // 判断文件是否需要扩容
         fileSize = filePadding.padFile(fos.getChannel(), filePosition);
         byte[] buf = request.getSerializeData();
         if (buf == null || buf.length == 0) {

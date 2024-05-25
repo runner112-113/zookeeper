@@ -48,6 +48,9 @@ import org.slf4j.LoggerFactory;
  * above the implementations
  * of txnlog and snapshot
  * classes
+ *
+ * FileTxnSnapLog是ZooKeeper上层服务器和底层数据存储之间的对接层，
+ * 提供了一系列操作数据文件的接口，包括事务日志文件和快照数据文
  */
 public class FileTxnSnapLog {
 
@@ -251,6 +254,7 @@ public class FileTxnSnapLog {
      */
     public long restore(DataTree dt, Map<Long, Integer> sessions, PlayBackListener listener) throws IOException {
         long snapLoadingStartTime = Time.currentElapsedTime();
+        // 恢复快照日志
         long deserializeResult = snapLog.deserialize(dt, sessions);
         ServerMetrics.getMetrics().STARTUP_SNAP_LOAD_TIME.add(Time.currentElapsedTime() - snapLoadingStartTime);
         FileTxnLog txnLog = new FileTxnLog(dataDir);
@@ -263,6 +267,7 @@ public class FileTxnSnapLog {
             trustEmptyDB = autoCreateDB;
         }
 
+        // 恢复事务日志
         RestoreFinalizer finalizer = () -> {
             long highestZxid = fastForwardFromEdits(dt, sessions, listener);
             // The snapshotZxidDigest will reset after replaying the txn of the
@@ -357,6 +362,10 @@ public class FileTxnSnapLog {
                                           + e.getMessage(),
                                           e);
                 }
+                /**
+                 * 每当有一个事务被应用到内存数据库中去后，ZooKeeper同时会回调PlayBackListener监听器，
+                 * 将这一事务操作记录转换成Proposal，并保存到ZKDatabase.committedLog中，以便Follower进行快速同步。
+                 */
                 listener.onTxnLoaded(hdr, itr.getTxn(), itr.getDigest());
                 if (!itr.next()) {
                     break;

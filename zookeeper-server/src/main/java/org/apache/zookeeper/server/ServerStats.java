@@ -32,9 +32,18 @@ public class ServerStats {
 
     private static final Logger LOG = LoggerFactory.getLogger(ServerStats.class);
 
+    /**
+     * 从ZooKeeper启动开始，或是最近一次重置服务端统计信息之后，服务端向客户端发送的响应包次数
+     */
     private final AtomicLong packetsSent = new AtomicLong();
+    /**
+     * 从ZooKeeper启动开始，或是最近一次重置服务端统计信息之后，服务端接收到的来自客户端的请求包次数
+     */
     private final AtomicLong packetsReceived = new AtomicLong();
 
+    /**
+     * 从ZooKeeper启动开始，或是最近一次重置服务端统计信息之后，服务端请求处理的最大延时、最小延时以及总延时
+     */
     private final AvgMinMaxCounter requestLatency = new AvgMinMaxCounter("request_latency");
 
     private final AtomicLong fsyncThresholdExceedCount = new AtomicLong(0);

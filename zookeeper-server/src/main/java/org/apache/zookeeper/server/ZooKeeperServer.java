@@ -516,6 +516,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
 
     /**
      *  Restore sessions and data
+     *  每次在ZooKeeper启动的时候，都需要从本地快照数据文件和事务日志文件中进行数据恢复
      */
     public void loadData() throws IOException, InterruptedException {
         /*
@@ -576,6 +577,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
             if (fastForwardFromEdits) {
                 zkDb.fastForwardDataBase();
             }
+            // 序列化DataTree以及会话信息
             snapFile = txnLogFactory.save(zkDb.getDataTree(), zkDb.getSessionWithTimeOuts(), syncSnap);
         } catch (IOException e) {
             if (isSevere) {
@@ -733,6 +735,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
             "Expiring session 0x{}, timeout of {}ms exceeded",
             Long.toHexString(sessionId),
             session.getTimeout());
+        // 提交closeSessionq请求
         close(sessionId);
     }
 
@@ -809,13 +812,18 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
 
     private void startupWithServerState(State state) {
         if (sessionTracker == null) {
+            // 创建Session管理器
             createSessionTracker();
         }
+        // 启动Session管理器
         startSessionTracker();
+
+        // 初始化请求处理链：
         setupRequestProcessors();
 
         startRequestThrottler();
 
+        // 注册jmx
         registerJMX();
 
         startJvmPauseMonitor();

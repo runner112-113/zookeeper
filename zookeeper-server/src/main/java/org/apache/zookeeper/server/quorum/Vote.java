@@ -70,22 +70,24 @@ public class Vote {
     private final int version;
 
     /**
-     * myId 服务器id
+     * 被推举的Leader的SID值
      */
     private final long id;
 
     /**
+     * 被推举的Leader的事务ID
      * 事务id,epoch(高32位)+counter(低32位)
      */
     private final long zxid;
 
     /**
      * 选举的纪元（周期）
+     * 逻辑时钟，用来判断多个投票是否在同一轮选举周期中。该值在服务端是一个自增序列。每次进入新一轮的投票后，都会对该值进行加1操作
      */
     private final long electionEpoch;
 
     /**
-     *
+     * 被推举的Leader的epoch
      */
     private final long peerEpoch;
 
@@ -113,6 +115,9 @@ public class Vote {
         return state;
     }
 
+    /**
+     * 当前服务器的状态
+     */
     private final ServerState state;
 
     @Override

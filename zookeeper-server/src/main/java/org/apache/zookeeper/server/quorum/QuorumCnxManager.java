@@ -94,6 +94,7 @@ import org.slf4j.LoggerFactory;
  * Although this is not a problem for the leader election, it could be a problem
  * when consolidating peer communication. This is to be verified, though.
  *
+ * QuorumCnxManager负责各台服务器之间的底层Leader选举过程中的网络通信。
  */
 
 public class QuorumCnxManager {
@@ -156,13 +157,23 @@ public class QuorumCnxManager {
 
     /*
      * Mapping from Peer to Thread number
+     * 发送器集合。每个Sendworker消息发送器，都对应一台远程ZooKeeper服务器，负责消息的发送。
+     * 同样，在senderWorkerMap中，也按照SID进行了分组
      */
-    final ConcurrentHashMap<Long, SendWorker> senderWorkerMap;
-    final ConcurrentHashMap<Long, BlockingQueue<ByteBuffer>> queueSendMap;
-    final ConcurrentHashMap<Long, ByteBuffer> lastMessageSent;
+    final ConcurrentHashMap<Long/*sid*/, SendWorker> senderWorkerMap;
+    /**
+     * 消息发送队列，用于保存那些待发送的消息。queueSendMap是一个Map，
+     * 按照SID进行分组，分别为集群中的每台机器分配了一个单独队列，从而保证各台机器之间的消息发送互不影响
+     */
+    final ConcurrentHashMap<Long/*sid*/, BlockingQueue<ByteBuffer>> queueSendMap;
+    /**
+     * 最近发送过的消息。在这个集合中，为每个SID保留最近发送过的一个消息
+     */
+    final ConcurrentHashMap<Long/*sid*/, ByteBuffer> lastMessageSent;
 
     /*
      * Reception queue
+     * 消息接收队列，用于存放那些从其他服务器接收到的消息
      */
     public final BlockingQueue<Message> recvQueue;
 
@@ -545,6 +556,9 @@ public class QuorumCnxManager {
      * to this server already or not. If it does, then it sends the smallest
      * possible long value to lose the challenge.
      *
+     * 为了避免两台机器之间重复地创建TCP连接，
+     * ZooKeeper设计了一种建立TCP连接的规则：只允许SID大的服务器主动和其他服务器建立连接，否则断开连接。
+     * 在ReceiveConnection函数中，服务器通过对比自已和远程服务器的SID值，来判断是否接受连接请求。如果当前服务器发现自已的SID值更大，那么会断开当前连接，然后自己主动去和远程服务器建立连接。
      */
     public void receiveConnection(final Socket sock) {
         DataInputStream din = null;
@@ -635,6 +649,10 @@ public class QuorumCnxManager {
         // do authenticating learner
         authServer.authenticate(sock, din);
         //If wins the challenge, then close the new connection.
+        /**
+         * 如果当前服务器发现自已的SID值更大，那么会断开当前连接，
+         * 然后自己主动去和远程服务器建立连接
+         */
         if (sid < self.getMyId()) {
             /*
              * This replica might still believe that the connection to sid is
@@ -652,6 +670,7 @@ public class QuorumCnxManager {
             LOG.debug("Create new connection to server: {}", sid);
             closeSocket(sock);
 
+            // 自己去连接
             if (electionAddr != null) {
                 connectOne(sid, electionAddr);
             } else {
@@ -1253,6 +1272,10 @@ public class QuorumCnxManager {
                  * If the send queue is non-empty, then we have a recent
                  * message than that stored in lastMessage. To avoid sending
                  * stale message, we should send the message in the send queue.
+                 *
+                 * 一旦ZooKeeper发现针对当前远程服务器的消息发送队列为空，那么这个时候就需要从lastMessageSent中取出一个最近发送过的消息来进行再次发送。
+                 * 这个细节的处理主要是为了解决这样一类分布式问题：接收方在消息接收前，或者是在接收到消息后服务器挂掉了，导致消息尚未被正确处理。
+                 * 那么如此重复发送是否会导致其他问题呢？当然，这里可以放心的一点是，ZooKeeper能够保证接收方在处理消息的时候，会对重复消息进行正确的处理。
                  */
                 BlockingQueue<ByteBuffer> bq = queueSendMap.get(sid);
                 if (bq == null || isSendQueueEmpty(bq)) {

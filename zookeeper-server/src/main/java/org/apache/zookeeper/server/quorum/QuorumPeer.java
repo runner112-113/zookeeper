@@ -576,9 +576,21 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
     }
 
     public enum ServerState {
+        /**
+         * 寻找Leader状态。当服务器处于该状态时，它会认为当前集群中没有Leader，因此需要进人Leader选举流程
+         */
         LOOKING,
+        /**
+         * 跟随者状态，表明当前服务器角色是Follower
+         */
         FOLLOWING,
+        /**
+         * 领导者状态，表明当前服务器角色是Leader
+         */
         LEADING,
+        /**
+         * 观察者状态，表明当前服务器角色是Observer
+         */
         OBSERVING
     }
 
@@ -1452,6 +1464,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
         case 2:
             throw new UnsupportedOperationException("Election Algorithm 2 is not supported.");
         case 3:
+            // 创建QuorumCnxManager
             QuorumCnxManager qcm = createCnxnManager();
             QuorumCnxManager oldQcm = qcmRef.getAndSet(qcm);
             if (oldQcm != null) {

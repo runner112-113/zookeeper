@@ -27,6 +27,9 @@ import org.slf4j.LoggerFactory;
 /**
  * This is a very simple RequestProcessor that simply forwards a request from a
  * previous stage to the leader as an ACK.
+ * AckRequestProcessor处理器是Leader特有的处理器，
+ * 其主要负责在SyncRequestProcessor 处理器完成事务日志记录后，向 Proposal 的投票收集器发送 ACK 反馈，
+ * 以通知投票收集器当前服务器已经完成了对该Proposal的事务日志记录。
  */
 class AckRequestProcessor implements RequestProcessor {
 

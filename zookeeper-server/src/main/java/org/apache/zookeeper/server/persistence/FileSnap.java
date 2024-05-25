@@ -74,6 +74,7 @@ public class FileSnap implements SnapShot {
         // we run through 100 snapshots (not all of them)
         // if we cannot get it running within 100 snapshots
         // we should  give up
+        // 获取最新的100个快照文件
         List<File> snapList = findNValidSnapshots(100);
         if (snapList.size() == 0) {
             return -1L;
@@ -87,6 +88,7 @@ public class FileSnap implements SnapShot {
             snapZxid = Util.getZxidFromName(snap.getName(), SNAPSHOT_FILE_PREFIX);
             try (CheckedInputStream snapIS = SnapStream.getInputStream(snap)) {
                 InputArchive ia = BinaryInputArchive.getArchive(snapIS);
+                // 反序列化出DataTree和Session信息
                 deserialize(dt, sessions, ia);
                 SnapStream.checkSealIntegrity(snapIS, ia);
 

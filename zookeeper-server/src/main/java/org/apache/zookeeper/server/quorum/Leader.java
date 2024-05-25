@@ -656,6 +656,7 @@ public class Leader extends LearnerMaster {
 
             // Start thread that waits for connection requests from
             // new followers.
+            // 创建并启动Follower接收器LearnerCnxAcceptor
             cnxAcceptor = new LearnerCnxAcceptor();
             cnxAcceptor.start();
 
@@ -1125,6 +1126,10 @@ public class Leader extends LearnerMaster {
         }
     }
 
+    /**
+     * ToBeAppliedRequestProcessor处理器中有一个toBeAppLied队列，专门用来存储那些已经被CommitProcessor 处理过的可被提交的Proposal。
+     * ToBeAppliedRequestProcessor 处理器将这些请求逐个交付给FinaLRequestProcessor处理器进行处理—一等到 FinaLRequestProcessor 处理器处理完之后，再将其从toBeAppLied队列中移除。
+     */
     static class ToBeAppliedRequestProcessor implements RequestProcessor {
 
         private final RequestProcessor next;
@@ -1158,6 +1163,7 @@ public class Leader extends LearnerMaster {
          * @see org.apache.zookeeper.server.RequestProcessor#processRequest(org.apache.zookeeper.server.Request)
          */
         public void processRequest(Request request) throws RequestProcessorException {
+            // 交给FinalRequestProcessor处理
             next.processRequest(request);
 
             // The only requests that should be on toBeApplied are write

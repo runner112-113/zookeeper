@@ -189,6 +189,7 @@ public class NIOServerCnxn extends ServerCnxn {
             incomingBuffer.flip();
             packetReceived(4 + incomingBuffer.remaining());
             if (!initialized) {
+                // 创建连接请求
                 readConnectRequest();
             } else {
                 readRequest();
@@ -440,6 +441,7 @@ public class NIOServerCnxn extends ServerCnxn {
             throw new IOException("ZooKeeperServer not running");
         }
         BinaryInputArchive bia = BinaryInputArchive.getArchive(new ByteBufferInputStream(incomingBuffer));
+        // 反序列化 ConnectRequest
         ConnectRequest request = protocolManager.deserializeConnectRequest(bia);
         zkServer.processConnectRequest(this, request);
         initialized = true;

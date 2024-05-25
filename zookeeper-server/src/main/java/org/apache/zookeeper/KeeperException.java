@@ -347,6 +347,7 @@ public abstract class KeeperException extends Exception {
         /** A data inconsistency was found */
         DATAINCONSISTENCY(DataInconsistency),
         /** Connection to the server has been lost */
+        // 连接断开
         CONNECTIONLOSS(ConnectionLoss),
         /** Error while marshalling or unmarshalling data */
         MARSHALLINGERROR(MarshallingError),

@@ -89,6 +89,11 @@ import org.slf4j.LoggerFactory;
  * in the queue to be applied when generating a transaction.
  *
  * 预处理器
+ *
+ * PrepRequestProcessor是Leader服务器的请求预处理器，也是Leader服务器的第一个请求处理器。
+ * 在ZooKeeper中，我们将那些会改变服务器状态的请求称为“事务请求”—通常指的就是那些创建节点、更新数据、删除节点以及创建会话等请求,
+ * PrepRequestProcessor能够识别出当前客户端请求是否是事务请求。
+ * 对于事务请求，PrepRequestProcessor 处理器会对其进行一系列预处理，诸如创建请求事务头、事务体，会话检查、ACL检查和版本检查等。
  */
 public class PrepRequestProcessor extends ZooKeeperCriticalThread implements RequestProcessor {
 
@@ -581,6 +586,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
                 // synchronized block, otherwise there will be a race
                 // condition with the on flying deleteNode txn, and we'll
                 // delete the node again here, which is not correct
+                // 获取当前会话的所有临时节点
                 Set<String> es = zks.getZKDatabase().getEphemerals(request.sessionId);
                 for (ChangeRecord c : zks.outstandingChanges) {
                     if (c.stat == null) {

@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 public class FilePadding {
 
     private static final Logger LOG;
+    // 64MB
     private static long preAllocSize = 65536 * 1024;
     private static final ByteBuffer fill = ByteBuffer.allocateDirect(1);
 
@@ -77,6 +78,7 @@ public class FilePadding {
     }
 
     long padFile(FileChannel fileChannel, long position) throws IOException {
+        // 判断文件是否需要扩容
         long newFileSize = calculateFileSizeWithPadding(position, currentSize, preAllocSize);
         if (currentSize != newFileSize) {
             fileChannel.write((ByteBuffer) fill.position(0), newFileSize - fill.remaining());
@@ -96,6 +98,10 @@ public class FilePadding {
      * @param preAllocSize how many bytes to pad
      * @return the new file size. It can be the same as fileSize if no
      * padding was done.
+     *
+     * 略。当检测到当前事务日志文件剩余空间不足4096字节（4KB）时，就会开始进行文件空间扩容。
+     * 文件空间扩容的过程其实非常简单，就是在现有文件大小的基础上，将文件大小增加65536KB（64MB），然后使用“0”（\0）填充这些被扩容的文件空间。
+     *
      */
     // VisibleForTesting
     public static long calculateFileSizeWithPadding(long position, long fileSize, long preAllocSize) {

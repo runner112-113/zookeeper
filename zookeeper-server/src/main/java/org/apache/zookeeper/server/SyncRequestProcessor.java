@@ -48,6 +48,9 @@ import org.slf4j.LoggerFactory;
  *             It never send ack back to the leader, so the nextProcessor will
  *             be null. This change the semantic of txnlog on the observer
  *             since it only contains committed txns.
+ *
+ *  SyncRequestProcessor 是事务日志记录处理器，
+ *  该处理器主要用来将事务请求记录到事务日志文件中去，同时还会触发ZooKeeper 进行数据快照
  */
 // 同步请求处理器
 public class SyncRequestProcessor extends ZooKeeperCriticalThread implements RequestProcessor {
@@ -191,7 +194,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
                     if (shouldSnapshot()) {
                         resetSnapshotStats();
                         // roll the log
-                        // 切换事务日志文件
+                        // 切换事务日志文件(指当前的事务日志已经“写满”（已经写人了snapCount个事务日志），需要重新创建一个新的事务日志)
                         zks.getZKDatabase().rollLog();
                         // take a snapshot
                         if (!snapThreadMutex.tryAcquire()) {

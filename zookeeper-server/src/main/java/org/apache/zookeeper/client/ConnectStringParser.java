@@ -39,6 +39,7 @@ public final class ConnectStringParser {
 
     private static final int DEFAULT_PORT = 2181;
 
+    // Namespace
     private final String chrootPath;
 
     private final ArrayList<InetSocketAddress> serverAddresses = new ArrayList<>();

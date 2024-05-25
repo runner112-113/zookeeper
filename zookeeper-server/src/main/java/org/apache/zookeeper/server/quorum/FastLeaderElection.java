@@ -209,7 +209,13 @@ public class FastLeaderElection implements Election {
 
     }
 
+    /**
+     * 选票发送队列，用于保存待发送的选票
+     */
     LinkedBlockingQueue<ToSend> sendqueue;
+    /**
+     * 选票接收队列，用于保存接收到的外部投票
+     */
     LinkedBlockingQueue<Notification> recvqueue;
 
     /**
@@ -436,6 +442,10 @@ public class FastLeaderElection implements Election {
                                  * lagging behind.
                                  */
                                 // 如果发送方的选举纪元比自己的小 马上将自己的选票发送给对方
+                                /**
+                                 * 如果发现该外部投票的选举轮次小于当前服务器，那么就直接忽略这个外部投票，
+                                 * 同时立即发出自已的内部投票
+                                 */
                                 if ((ackstate == QuorumPeer.ServerState.LOOKING)
                                     && (n.electionEpoch < logicalclock.get())) {
                                     Vote v = getVote();
@@ -455,6 +465,8 @@ public class FastLeaderElection implements Election {
                                 /*
                                  * If this server is not looking, but the one that sent the ack
                                  * is looking, then send back what it believes to be the leader.
+                                 * 如果当前服务器并不是LOOKING状态，即已经选举出了Leader，
+                                 * 那么也将忽略这个外部投票，同时将Leader信息以投票的形式发送出去。
                                  */
                                 Vote current = self.getCurrentVote();
                                 if (ackstate == QuorumPeer.ServerState.LOOKING) {
@@ -588,6 +600,9 @@ public class FastLeaderElection implements Election {
 
     QuorumPeer self;
     Messenger messenger;
+    /**
+     * 选举的轮次
+     */
     AtomicLong logicalclock = new AtomicLong(); /* Election instance */
     long proposedLeader;
     long proposedZxid;
@@ -1056,6 +1071,11 @@ public class FastLeaderElection implements Election {
                             break;
                         }
                         // If notification > current, replace and send messages out
+                        /**
+                         * 外部投票的选举轮次大于内部投票:
+                         * 如果服务器发现自已的选举轮次已经落后于该外部投票对应服务器的选举轮次，那么就会立即更新自已的选举轮次（logicalclock），
+                         * 并且清空所有已经收到的投票，然后使用初始化的投票来进行PK以确定是否变更内部投票，最终再将内部投票发送出去。
+                         */
                         if (n.electionEpoch > logicalclock.get()) {
                             // 当前逻辑时钟 logicalclock 设置为外部选票选举纪元
                             logicalclock.set(n.electionEpoch);
@@ -1067,12 +1087,21 @@ public class FastLeaderElection implements Election {
                                 updateProposal(getInitId(), getInitLastLoggedZxid(), getPeerEpoch());
                             }
                             sendNotifications();
+
+                            /**
+                             * 外部投票的选举轮次小于内部投票:
+                             * 如果接收到的选票的选举轮次落后于服务器自身的，
+                             * 那么ZooKeeper就会直接忽略该外部投票，不做任何处理
+                             */
                         } else if (n.electionEpoch < logicalclock.get()) {
                                 LOG.debug(
                                     "Notification election epoch is smaller than logicalclock. n.electionEpoch = 0x{}, logicalclock=0x{}",
                                     Long.toHexString(n.electionEpoch),
                                     Long.toHexString(logicalclock.get()));
                             break;
+                            /**
+                             * 外部投票的选举轮次和内部投票一致
+                             */
                         } else if (totalOrderPredicate(n.leader, n.zxid, n.peerEpoch, proposedLeader, proposedZxid, proposedEpoch)) {
                             updateProposal(n.leader, n.zxid, n.peerEpoch);
                             sendNotifications();
@@ -1087,6 +1116,11 @@ public class FastLeaderElection implements Election {
 
                         // don't care about the version if it's in LOOKING state
                         // 加入接受的选票集合
+                        /**
+                         * 无论是否进行了投票变更，都会将刚刚收到的那份外部投票放入“选票集合”recvset中进行归档。
+                         * recvset用于记录当前服务器在本轮次的Leader选举中收到的所有外部投票按照服务器对应的SID来区分，
+                         * 例如，{（1，vote1），（2，vote2),...}。
+                         */
                         recvset.put(n.sid, new Vote(n.leader, n.zxid, n.electionEpoch, n.peerEpoch));
 
                         voteSet = getVoteTracker(recvset, new Vote(proposedLeader, proposedZxid, logicalclock.get(), proposedEpoch));
@@ -1095,6 +1129,10 @@ public class FastLeaderElection implements Election {
                         if (voteSet.hasAllQuorums()) {
 
                             // Verify if there is any change in the proposed leader
+                            /**
+                             * 如果统计投票发现已经有过半的服务器认可了当前的选票，这个时候，
+                             * ZooKeeper并不会立即进人步骤10来更新服务器状态，而是会等待一段时间finalizeWait（默认是200毫秒）来确定是否有新的更优的投票。
+                             */
                             while ((n = recvqueue.poll(finalizeWait, TimeUnit.MILLISECONDS)) != null) {
                                 if (totalOrderPredicate(n.leader, n.zxid, n.peerEpoch, proposedLeader, proposedZxid, proposedEpoch)) {
                                     recvqueue.put(n);

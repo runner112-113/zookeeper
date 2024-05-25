@@ -53,8 +53,10 @@ public final class StaticHostProvider implements HostProvider {
     private List<InetSocketAddress> serverAddresses = new ArrayList<>(5);
 
     private Random sourceOfRandomness;
+    // 前正在使用的服务器地址位置
     private int lastIndex = -1;
 
+    // 队列中当前遍历到的那个元素位置
     private int currentIndex = -1;
 
     /**
@@ -346,6 +348,7 @@ public final class StaticHostProvider implements HostProvider {
                 reconfigMode = false;
                 needToSleep = (spinDelay > 0);
             }
+            // 游标移动超过整个地址列表后就重置为0
             ++currentIndex;
             if (currentIndex == serverAddresses.size()) {
                 currentIndex = 0;
@@ -369,6 +372,7 @@ public final class StaticHostProvider implements HostProvider {
     }
 
     public synchronized void onConnected() {
+        // 更新当前在使用的地址
         lastIndex = currentIndex;
         reconfigMode = false;
     }
