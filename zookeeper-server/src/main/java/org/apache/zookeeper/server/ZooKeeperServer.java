@@ -109,6 +109,11 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
     protected static final Logger LOG;
     private static final RateLogger RATE_LOGGER;
 
+    /**
+     * 该参数有默认值：1000，可以不配置，仅支持系统属性方式配置：zookeeper.globalOutstandingLimit。
+     * 参数globalOutstandingLimit用于配置ZooKeeper服务器最大请求堆积数量。
+     * 在ZooKeeper服务器运行的过程中，客户端会源源不断的将请求发送到服务端，为了防止服务端资源（包括CPU、内存和网络等）耗尽，服务端必须限制同时处理的请求数，即最大请求堆积数量。
+     */
     public static final String GLOBAL_OUTSTANDING_LIMIT = "zookeeper.globalOutstandingLimit";
 
     public static final String ENABLE_EAGER_ACL_CHECK = "zookeeper.enableEagerACLCheck";
@@ -119,6 +124,11 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
     // before sending the requests to the quorum.
     static boolean enableEagerACLCheck;
 
+    /**
+     * 该参数有默认值：no，可以不配置，可选配置项为“yes”和“no”，仅支持系统属性方式配置：zookeeper.skipACL。
+     * 该参数用于配置ZooKeeper服务器是否跳过ACL权限检查，默认情况下是“no”，即会对每一个客户端请求进行权限检查。
+     * 如果将其设置为“yes”，则能一定程度的提高ZooKeeper的读写性能，但同时也将向所有客户端开放ZooKeeper的数据，包括那些之前设置过ACL权限的数据节点，也将不再接受权限控制。
+     */
     static final boolean skipACL;
 
     public static final boolean enforceQuota;

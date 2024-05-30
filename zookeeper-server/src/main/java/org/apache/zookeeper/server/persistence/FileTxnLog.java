@@ -18,23 +18,10 @@
 
 package org.apache.zookeeper.server.persistence;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.Closeable;
-import java.io.EOFException;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.FilterInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.RandomAccessFile;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Queue;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.Adler32;
 import java.util.zip.Checksum;
@@ -108,7 +95,12 @@ public class FileTxnLog implements TxnLog, Closeable {
     static final String FSYNC_WARNING_THRESHOLD_MS_PROPERTY = "fsync.warningthresholdms";
     static final String ZOOKEEPER_FSYNC_WARNING_THRESHOLD_MS_PROPERTY = "zookeeper." + FSYNC_WARNING_THRESHOLD_MS_PROPERTY;
 
-    /** Maximum time we allow for elapsed fsync before WARNing */
+    /** Maximum time we allow for elapsed fsync before WARNing
+     *
+     * 该参数有默认值：1000，单位是毫秒，可以不配置，仅支持系统属性方式配置：fsync.warningthresholdms。
+     * 参数fsync.warningthresholdms用于配置ZooKeeper进行事务日志fsync操作时消耗时间的报警阔值。
+     * 一旦进行一个fsync操作消耗的时间大于参数fsync.warningthresholdms指定的值，那么就在日志中打印出报警日志。
+     * */
     private static final long fsyncWarningThresholdMS;
 
     /**
@@ -152,6 +144,12 @@ public class FileTxnLog implements TxnLog, Closeable {
     volatile FileOutputStream fos = null;
 
     File logDir;
+    /**
+     * 该参数有默认值：yes，可以不配置，可选配置项为“yes”和“no”，仅支持系统属性方式配置：zookeeper.forceSync。
+     * 该参数用于配置ZooKeeper服务器是否在事务提交的时候，将日志写入操作强制刷入磁盘（即调用java.nio.channels.FileChannel.force接口），
+     * 默认情况下是“yes”，即每次事务日志写入操作都会实时刷入磁盘。
+     * 如果将其设置为“no”，则能一定程度的提高ZooKeeper的写性能，但同时也会存在类似于机器断电这样的安全风险。
+     */
     private final boolean forceSync = !System.getProperty("zookeeper.forceSync", "yes").equals("no");
     long dbId;
     /**
@@ -288,6 +286,7 @@ public class FileTxnLog implements TxnLog, Closeable {
 
             logFileWrite = new File(logDir, Util.makeLogName(hdr.getZxid()));
             fos = new FileOutputStream(logFileWrite);
+            // 缓冲区大小8KB
             logStream = new BufferedOutputStream(fos);
             oa = BinaryOutputArchive.getArchive(logStream);
             // 构建日志文件头信息
@@ -838,6 +837,22 @@ public class FileTxnLog implements TxnLog, Closeable {
             }
         }
 
+    }
+
+    public static void main(String[] args) throws Exception {
+        File logFileWrite = new File("D://opt/temp.log");
+        FileOutputStream fos = new FileOutputStream(logFileWrite);
+        // 缓冲区大小8KB
+        BufferedOutputStream logStream = new BufferedOutputStream(fos);
+        BinaryOutputArchive oa = BinaryOutputArchive.getArchive(logStream);
+
+        // 8kb
+        byte[] buf = new byte[8191];
+        Arrays.fill(buf, (byte) 0);
+        oa.writeBuffer(buf, "test");
+        // 构建日志文件头信息
+        FileHeader fhdr = new FileHeader(TXNLOG_MAGIC, VERSION, 1);
+        fhdr.serialize(oa, "fileheader");
     }
 
 }

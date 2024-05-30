@@ -83,6 +83,7 @@ public class ProposalRequestProcessor implements RequestProcessor {
             zks.getLeader().processSync((LearnerSyncRequest) request);
         } else {
             if (shouldForwardToNextProcessor(request)) {
+                // 提交到CommitProcessor的处理队列
                 nextProcessor.processRequest(request);
             }
             // 事务 类型的 Transactions ---> 需要就集群同步
@@ -107,6 +108,15 @@ public class ProposalRequestProcessor implements RequestProcessor {
         syncProcessor.shutdown();
     }
 
+    /**
+     * 启用 (false)：当 zookeeper.forward_learner_requests_to_commit_processor_disabled 被设置为 false 时（这是默认值），
+     * 来自 Learner 节点的请求将被转发到 Commit Processor 进行处理。这意味着 Leader 将处理并提交这些事务性请求，从而保证数据的一致性。
+     *
+     * 禁用 (true)：当 zookeeper.forward_learner_requests_to_commit_processor_disabled 被设置为 true 时，
+     * 来自 Learner 节点的请求将不会被转发到 Commit Processor。这可能用于某些优化场景或者特殊配置下，减少 Leader 处理请求的负载。
+     * @param request
+     * @return
+     */
     private boolean shouldForwardToNextProcessor(Request request) {
         if (!forwardLearnerRequestsToCommitProcessorDisabled) {
             return true;

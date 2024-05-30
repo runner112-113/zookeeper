@@ -132,6 +132,7 @@ public class QuorumCnxManager {
 
     /*
      * Connection time out value in milliseconds
+     * 该参数有默认值：5000，单位是毫秒，可以不配置，仅支持系统属性方式配置：zookeeper.cnxTimeout。该参数用于配置在Leader选举过程中，各服务器之间进行TCP连接创建的超时时间。
      */
 
     private int cnxTO = 5000;

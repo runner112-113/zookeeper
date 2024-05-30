@@ -103,7 +103,19 @@ public class QuorumPeerConfig {
     protected long serverId = UNSET_SERVERID;
 
     protected QuorumVerifier quorumVerifier = null, lastSeenQuorumVerifier = null;
+    /**
+     * 该参数有默认值：3，可以不配置，不支持系统属性方式配置
+     * 从3.4.0版本开始，ZooKeeper提供了对历史事务日志和快照数据自动清理的支持。
+     * 参数autopurge.snapRetainCount用于配置ZooKeeper在自动清理的时候需要保留的快照数据文件数量和对应的事务日志文件。
+     * 需要注意的是，并不是磁盘上的所有事务日志和快照数据文件都可以被清理掉那样的话将无法恢复数据。
+     * 因此参数autopurge.snapRetainCount的最小值是3，如果配置的autopurge.snapRetaincount值比3小的话，那么会被自动调整到3，即至少需要保留3个快照数据文件和对应的事务日志文件。
+     */
     protected int snapRetainCount = 3;
+    /**
+     * 该参数有默认值：0，单位是小时，可以不配置，不支持系统属性方式配置。
+     * 参数autopurge.purgeInterval和参数autopurge.snapRetainCount配套使用，用于配置ZooKeeper进行历史文件自动清理的频率。
+     * 如果配置该值为0或负数，那么就表明不需要开启定时清理功能。ZooKeeper默认不开启这项功能。
+     */
     protected int purgeInterval = 0;
     protected boolean syncEnabled = true;
 

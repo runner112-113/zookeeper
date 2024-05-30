@@ -32,6 +32,12 @@ public class BinaryInputArchive implements InputArchive {
     public static final String UNREASONBLE_LENGTH = "Unreasonable length = ";
 
     // CHECKSTYLE.OFF: ConstantName - for backward compatibility
+    /**
+     * 该参数有默认值：1048575，单位是字节，可以不配置，仅支持系统属性方式配置：jute.maxbuffer。
+     * 该参数用于配置单个数据节点（ZNode）上可以存储的最大数据量大小。
+     * 通常情况下，运维人员不需要改动该参数，同时考虑到ZooKeeper上不适宜存储太多的数据，往往还需要将该参数设置的更小。
+     * 需要注意的是，在变更该参数的时候，需要在ZooKeeper集群的所有机器以及所有的客户端上均设置才能生效。
+     */
     public static final int maxBuffer = Integer.getInteger("jute.maxbuffer", 0xfffff);
     // CHECKSTYLE.ON:
     private static final int extraMaxBuffer;

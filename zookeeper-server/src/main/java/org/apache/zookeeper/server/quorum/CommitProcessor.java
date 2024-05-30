@@ -93,9 +93,17 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
     public static final String ZOOKEEPER_COMMIT_PROC_NUM_WORKER_THREADS = "zookeeper.commitProcessor.numWorkerThreads";
     /** Default worker pool shutdown timeout in ms: 5000 (5s) */
     public static final String ZOOKEEPER_COMMIT_PROC_SHUTDOWN_TIMEOUT = "zookeeper.commitProcessor.shutdownTimeout";
-    /** Default max read batch size: -1 to disable the feature */
+    /** Default max read batch size: -1 to disable the feature
+     * 读取批处理的最大大小,默认值：-1
+     * 指定一次读取操作处理的最大请求数量。
+     * 如果设置为 -1，则禁用批量读取处理功能，意味着每个读取请求将单独处理。
+     * */
     public static final String ZOOKEEPER_COMMIT_PROC_MAX_READ_BATCH_SIZE = "zookeeper.commitProcessor.maxReadBatchSize";
-    /** Default max commit batch size: 1 */
+    /** Default max commit batch size: 1
+     * 提交批处理的最大大小， 默认值为1
+     * 指定一次提交操作处理的最大请求数量。
+     * 默认值为 1，意味着每个提交请求将单独处理。增加这个值可以减少提交操作的频率，但可能会增加每次提交的处理时间
+     * */
     public static final String ZOOKEEPER_COMMIT_PROC_MAX_COMMIT_BATCH_SIZE = "zookeeper.commitProcessor.maxCommitBatchSize";
 
     /**
@@ -237,6 +245,7 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
                     if (requestsToProcess == 0 && !commitIsWaiting) {
                         // Waiting for requests to process
                         while (!stopped && requestsToProcess == 0 && !commitIsWaiting) {
+                            // 当没有待提交的请求的时候会wait
                             wait();
                             commitIsWaiting = !committedRequests.isEmpty();
                             requestsToProcess = queuedRequests.size();
@@ -317,6 +326,7 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
                         return;
                     }
 
+                    // 默认值为1
                     int commitsToProcess = maxCommitBatchSize;
 
                     /*
@@ -344,6 +354,7 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
                          * it must be a commit for a remote write.
                          */
                         // 校验事务请求
+                        // here guarantee Write requests must be processed in zxid order
                         if (!queuedWriteRequests.isEmpty()
                             && queuedWriteRequests.peek().sessionId == request.sessionId
                             && queuedWriteRequests.peek().cxid == request.cxid) {
@@ -387,7 +398,7 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
                                 // Only decrement if we take a request off the queue.
                                 numWriteQueuedRequests.decrementAndGet();
                                 queuedWriteRequests.poll();
-                                queuesToDrain.add(request.sessionId);
+                                queuesToDrain.add(request.sessionId );
                             }
                         }
                         /*
@@ -400,6 +411,7 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
 
                         // Process the write inline.
                         // 处理写请求
+                        // 由于commitsToProcess=1 所以每次只能处理一个写请求
                         processWrite(request);
 
                         commitIsWaiting = !committedRequests.isEmpty();
@@ -416,6 +428,7 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
                     for (Long sessionId : queuesToDrain) {
                         Deque<Request> sessionQueue = pendingRequests.get(sessionId);
                         int readsAfterWrite = 0;
+                        // 读请求可以处理多个
                         while (!stopped && !sessionQueue.isEmpty() && !needCommit(sessionQueue.peek())) {
                             numReadQueuedRequests.decrementAndGet();
                             sendToNextProcessor(sessionQueue.poll());
@@ -637,6 +650,7 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
         } else {
             numReadQueuedRequests.incrementAndGet();
         }
+        // 有请求过来了 唤醒CommitProcessor的run
         wakeup();
     }
 

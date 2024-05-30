@@ -59,7 +59,10 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
 
     private static final Request REQUEST_OF_DEATH = Request.requestOfDeath;
 
-    /** The number of log entries to log before starting a snapshot */
+    /** The number of log entries to log before starting a snapshot
+     * 该参数有默认值：100000，可以不配置，仅支持系统属性方式配置：zookeeper.snapcount
+     * 参数snapCount用于配置相邻两次数据快照之间的事务操作次数，即ZooKeeper会在snapCount次事务操作之后进行一次数据快照。
+     * */
     // 生成snapshot的事务记录参数值，可在zoo.cfg中进行配置，即事务日志记录数大于等于snapCount的时候，进行snapshot文件的生成；
     private static int snapCount = ZooKeeperServer.getSnapCount();
 
@@ -130,6 +133,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
      * set, flush only when the relevant condition is hit.
      */
     private boolean shouldFlush() {
+        // flushDelay默认值为0  maxBatchSize默认值为1000
         long flushDelay = zks.getFlushDelay();
         long maxBatchSize = zks.getMaxBatchSize();
         if ((flushDelay > 0) && (getRemainingDelay() == 0)) {

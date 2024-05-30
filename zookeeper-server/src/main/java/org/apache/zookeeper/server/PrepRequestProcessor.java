@@ -403,6 +403,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
             addChangeRecord(nodeRecord);
             break;
         case OpCode.reconfig:
+            // 通过reconfigEnabled 配置是否可以修改配置
             if (!zks.isReconfigEnabled()) {
                 LOG.error("Reconfig operation requested but reconfig feature is disabled.");
                 throw new KeeperException.ReconfigDisabledException();
@@ -438,6 +439,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
 
             String newMembers = reconfigRequest.getNewMembers();
 
+            // 非增量的，即全量替换
             if (newMembers != null) { //non-incremental membership change
                 LOG.info("Non-incremental reconfig");
 
@@ -452,6 +454,8 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
                 } catch (IOException | ConfigException e) {
                     throw new KeeperException.BadArgumentsException(e.getMessage());
                 }
+
+                // 增量处理
             } else { //incremental change - must be a majority quorum system
                 LOG.info("Incremental reconfig");
 
@@ -474,6 +478,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
                 }
                 Map<Long, QuorumServer> nextServers = new HashMap<>(lastSeenQV.getAllMembers());
                 try {
+                    // 移除 退出集群的结点
                     if (leavingServers != null) {
                         for (String leaving : leavingServers) {
                             long sid = Long.parseLong(leaving);
@@ -489,6 +494,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
                             }
                             // extract server id x from first part of joiner: server.x
                             Long sid = Long.parseLong(parts[0].substring(parts[0].lastIndexOf('.') + 1));
+                            // 构建QuorumServer
                             QuorumServer qs = new QuorumServer(sid, parts[1]);
                             if ((qs.clientAddr == null && qs.secureClientAddr == null) || qs.electionAddr == null || qs.addr == null) {
                                 throw new KeeperException.BadArgumentsException("Wrong format of server string - each server should have at least 3 ports specified");

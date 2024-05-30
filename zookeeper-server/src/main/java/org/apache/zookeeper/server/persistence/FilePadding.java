@@ -28,6 +28,12 @@ public class FilePadding {
 
     private static final Logger LOG;
     // 64MB
+    /**
+     * 该参数有默认值：65536，单位是KB，即64MB，可以不配置，仅支持系统属性方式配置：zookeeper.preAllocSize。
+     * 参数preAllocSize用于配置ZooKeeper事务日志文件预分配的磁盘空间大小。
+     * 通常情况下，我们使用ZooKeeper的默认配置65536KB即可，但是如果我们将参数snapcount设置得比默认值更小或更大，那么preAllocSize参数也要随之做出变更。
+     * 举个例子来说：如果我们将snapCount的值设置为500，同时预估每次事务操作的数据量大小至多1KB，那么参数preAllocSize设置为500就足够了。
+     */
     private static long preAllocSize = 65536 * 1024;
     private static final ByteBuffer fill = ByteBuffer.allocateDirect(1);
 
@@ -99,7 +105,7 @@ public class FilePadding {
      * @return the new file size. It can be the same as fileSize if no
      * padding was done.
      *
-     * 略。当检测到当前事务日志文件剩余空间不足4096字节（4KB）时，就会开始进行文件空间扩容。
+     * 当检测到当前事务日志文件剩余空间不足4096字节（4KB）时，就会开始进行文件空间扩容。
      * 文件空间扩容的过程其实非常简单，就是在现有文件大小的基础上，将文件大小增加65536KB（64MB），然后使用“0”（\0）填充这些被扩容的文件空间。
      *
      */

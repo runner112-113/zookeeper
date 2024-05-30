@@ -766,6 +766,11 @@ public class Leader extends LearnerMaster {
                 zk.setZxid((zk.getZxid() & 0xffffffff00000000L) | zxid);
             }
 
+            /**
+             * 该参数有默认值：yes，可以不配置，可选配置项为“yes”和“no”，仅支持系统属性方式配置：zookeeper.leaderServes。
+             * 该参数用于配置Leader服务器是否能够接受客户端的连接，即是否允许Leader向客户端提供服务，默认情况下，Leader服务器能够接受并处理客户端的所有读写请求。
+             * 在ZooKeeper的架构设计中，Leader服务器主要用来进行对事务更新请求的协调以及集群本身的运行时协调，因此，可以设置让Leader服务器不接受客户端的连接，以使其专注于进行分布式协调。
+             */
             if (!System.getProperty("zookeeper.leaderServes", "yes").equals("no")) {
                 self.setZooKeeperServer(zk);
             }

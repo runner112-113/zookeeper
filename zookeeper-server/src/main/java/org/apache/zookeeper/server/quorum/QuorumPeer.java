@@ -804,12 +804,25 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
 
     /**
      * The number of ticks that the initial synchronization phase can take
+     *
+     * 该参数有默认值：10，即表示是参数tickTime值的10倍，必须配置，且需要配置一个正整数，不支持系统属性方式配置。
+     * 该参数用于配置Leader服务器等待Follower启动，并完成数据同步的时间。
+     * Follower服务器在启动过程中，会与Leader建立连接并完成对数据的同步，从而确定自己对外提供服务的起始状态。
+     * Leader服务器允许Follower在initLimit时间内完成这个工作。
+     * 通常情况下，运维人员不用太在意这个参数的配置，使用其默认值即可。
+     * 但如果随着ZooKeeper集群管理的数据量增大，Follower服务器在启动的时候，从Leader上进行同步数据的时间也会相应变长，于是无法在较短的时间完成数据同步。
+     * 因此，在这种情况下，有必要适当调大这个参数。
      */
     protected volatile int initLimit;
 
     /**
      * The number of ticks that can pass between sending a request and getting
      * an acknowledgment
+     * 该参数有默认值：5，即表示是参数tickTime值的5倍，必须配置，且需要配置一个正整数，不支持系统属性方式配置。
+     * 该参数用于配置Leader服务器和Follower之间进行心跳检测的最大延时时间。
+     * 在ZooKeeper集群运行过程中，Leader服务器会与所有的Follower进行心跳检测来确定该服务器是否存活。
+     * 如果Leader服务器在syncLimit时间内无法获取到Follower的心跳检测响应，那么Leader就会认为该Follower已经脱离了和自己的同步
+     * 通常情况下，运维人员使用该参数的默认值即可，但如果部署ZooKeeper集群的网络环境质量较低（例如网络延时较大或丢包严重），那么可以适当调大这个参数。
      */
     // 从发送到响应的间隔时间
     protected volatile int syncLimit;

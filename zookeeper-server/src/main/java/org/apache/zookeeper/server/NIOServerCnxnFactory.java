@@ -587,8 +587,17 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
     }
 
     // ipMap is used to limit connections per IP
+    // 存储了 每个IP建立的所有连接
     private final ConcurrentHashMap<InetAddress, Set<NIOServerCnxn>> ipMap = new ConcurrentHashMap<>();
 
+    /**
+     * 该参数有默认值：60，可以不配置，不支持系统属性方式配置。
+     * 从Socket层面限制单个客户端与单台服务器之间的并发连接数，即以IP地址粒度来进行连接数的限制。
+     * 如果将该参数设置为0，则表示对连接数不作任何限制。
+     * 读者需要注意该连接数限制选项的使用范围，其仅仅是对单台客户端机器与单台ZooKeeper服务器之间的连接数限制，并不能控制所有客户端的连接数总和。
+     * 如果读者有类似需求的话，可以尝试阿里中间件团队提供的一个简单的补丁：http:/jm-blog.aliapp.com/?p=1334。
+     * 另外，在3.4.0版本以前该参数的默认值都是10，从3.4.0版本开始变成了60，因此运维人员尤其需要注意这个变化，以防ZooKeeper版本变化带来服务端连接数限制变化的隐患。
+     */
     protected int maxClientCnxns = 60;
     int listenBacklog = -1;
 
