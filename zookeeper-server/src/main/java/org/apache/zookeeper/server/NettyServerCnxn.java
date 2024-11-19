@@ -60,6 +60,9 @@ import org.apache.zookeeper.server.command.SetTraceMaskCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * 一个Neety连接 对Channel的封装
+ */
 public class NettyServerCnxn extends ServerCnxn {
 
     private static final Logger LOG = LoggerFactory.getLogger(NettyServerCnxn.class);
@@ -112,6 +115,7 @@ public class NettyServerCnxn extends ServerCnxn {
 
         LOG.debug("close called for session id: 0x{}", Long.toHexString(sessionId));
 
+        // 标记connection 当前正在closing
         setStale();
 
         // ZOOKEEPER-2743:
@@ -208,6 +212,7 @@ public class NettyServerCnxn extends ServerCnxn {
         ByteBuffer[] bb = serialize(h, r, cacheKey, stat, opCode);
         int responseSize = bb[0].getInt();
         bb[0].rewind();
+        // channel写出
         sendBuffer(bb);
         decrOutstandingAndCheckThrottle(h);
         return responseSize;
@@ -494,11 +499,13 @@ public class NettyServerCnxn extends ServerCnxn {
                             throw new IOException("ZK down");
                         }
                         if (initialized) {
+                            // 正常消息请求
                             RequestHeader h = new RequestHeader();
                             ByteBufferInputStream.byteBuffer2Record(bb, h);
                             RequestRecord request = RequestRecord.fromBytes(bb.slice());
                             zks.processPacket(this, h, request);
                         } else {
+                            // 连接请求
                             LOG.debug("got conn req request from {}", getRemoteSocketAddress());
                             BinaryInputArchive bia = BinaryInputArchive.getArchive(new ByteBufferInputStream(bb));
                             ConnectRequest request = protocolManager.deserializeConnectRequest(bia);

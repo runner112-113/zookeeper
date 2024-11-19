@@ -177,11 +177,13 @@ public class QuorumPeerMain {
             }
 
             quorumPeer = getQuorumPeer();
+            // FileTxnSnapLog
             quorumPeer.setTxnFactory(new FileTxnSnapLog(config.getDataLogDir(), config.getDataDir()));
             quorumPeer.enableLocalSessions(config.areLocalSessionsEnabled());
             quorumPeer.enableLocalSessionsUpgrading(config.isLocalSessionsUpgradingEnabled());
             //quorumPeer.setQuorumPeers(config.getAllMembers());
             quorumPeer.setElectionType(config.getElectionAlg());
+            // myId
             quorumPeer.setMyid(config.getServerId());
             quorumPeer.setTickTime(config.getTickTime());
             quorumPeer.setMinSessionTimeout(config.getMinSessionTimeout());
@@ -192,7 +194,9 @@ public class QuorumPeerMain {
             quorumPeer.setObserverMasterPort(config.getObserverMasterPort());
             quorumPeer.setConfigFileName(config.getConfigFilename());
             quorumPeer.setClientPortListenBacklog(config.getClientPortListenBacklog());
+            // 最大客户端连接数
             quorumPeer.setMaxClientCnxns(config.getMaxClientCnxns());
+            // zkDatebase
             quorumPeer.setZKDatabase(new ZKDatabase(quorumPeer.getTxnFactory()));
             quorumPeer.setQuorumVerifier(config.getQuorumVerifier(), false);
             if (config.getLastSeenQuorumVerifier() != null) {
@@ -231,6 +235,7 @@ public class QuorumPeerMain {
 
             quorumPeer.start();
             ZKAuditProvider.addZKStartStopAuditLog();
+            // 阻塞住
             quorumPeer.join();
         } catch (InterruptedException e) {
             // warn, but generally this is ok

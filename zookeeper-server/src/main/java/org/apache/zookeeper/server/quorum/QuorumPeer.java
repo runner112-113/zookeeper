@@ -1249,6 +1249,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
         }
         // 加载数据到DataTree中 其中如果Follower已经ACK了但没有接收到COMMIT指令的事务消息也会恢复
         loadDataBase();
+        // 服务和port进行绑定
         startServerCnxnFactory();
         try {
             // run command 的server
@@ -1258,6 +1259,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
         }
         // Leader选举的准备工作
         startLeaderElection();
+        // 启动jvm停顿监控
         startJvmPauseMonitor();
         // 启动线程（包含选举逻辑） QuorumPeer 是一个线程
         super.start();
@@ -1269,6 +1271,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
 
             // load the epochs
             long lastProcessedZxid = zkDb.getDataTree().lastProcessedZxid;
+            // 拿到最后条消息的epoch
             long epochOfZxid = ZxidUtils.getEpochFromZxid(lastProcessedZxid);
             try {
                 currentEpoch = readLongFromFile(CURRENT_EPOCH_FILENAME);
@@ -1333,6 +1336,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
     public synchronized void startLeaderElection() {
         try {
             if (getPeerState() == ServerState.LOOKING) {
+                // 先投票给自己
                 currentVote = new Vote(myid, getLastLoggedZxid(), getCurrentEpoch());
             }
         } catch (IOException e) {
@@ -2359,7 +2363,23 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
         }
     }
 
+    /**
+     * 作用：
+     *  1.记录节点最后一次接受的纪元值。
+     *  2.用于确保选举中不接受低于当前已接受纪元的提案。
+     * 使用场景：
+     *  1.在新一轮选举时，节点会先检查自己的 acceptedEpoch，确保不会支持低于当前纪元的领导者。
+     *  2.在数据同步时，确保跟随者的状态与领导者一致。
+     */
     private long acceptedEpoch = -1;
+    /**
+     * 作用：
+     *  1.记录当前节点所处的纪元（epoch）。
+     *  2.用于选举完成后，更新所有节点的当前纪元值，使集群在接下来的操作中处于一致的纪元。
+     * 使用场景：
+     *  1.在选举过程中，每个节点会比较它的 currentEpoch 与其他节点的 currentEpoch，以确定最新的纪元。
+     *  2.当选举完成后，领导者将自己的 currentEpoch 增加 1，并将其同步到所有跟随者的 currentEpoch 文件中。
+     */
     private long currentEpoch = -1;
 
     public static final String CURRENT_EPOCH_FILENAME = "currentEpoch";

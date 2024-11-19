@@ -275,14 +275,15 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
                        && (maxReadBatchSize < 0 || readsProcessed <= maxReadBatchSize)
                        && (request = queuedRequests.poll()) != null) {
                     requestsToProcess--;
-                    // 事务请求 或者 sync请求的会话有事务请求还未处理完的 也会加入pendingRequests队列
+                    // 事务请求 先放入pendingRequests （key为sessionId, value为Deque<Request>），当commit的时候才会开始处理写请求
+                    // 当同一会话的一个写请求为处理完 后面的读请求也会阻塞在这里
                     if (needCommit(request) || pendingRequests.containsKey(request.sessionId)) {
                         // Add request to pending
                         Deque<Request> requests = pendingRequests.computeIfAbsent(request.sessionId, sid -> new ArrayDeque<>());
                         requests.addLast(request);
                         ServerMetrics.getMetrics().REQUESTS_IN_SESSION_QUEUE.add(requests.size());
                     } else {
-                        // 非事务请求
+                        // 非事务请求  直接处理
                         readsProcessed++;
                         numReadQueuedRequests.decrementAndGet();
                         sendToNextProcessor(request);
@@ -298,6 +299,7 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
                      * pending write or for a write originating at a different
                      * server. We skip this if maxReadBatchSize is set.
                      */
+                    // 有事务请求可以提交了 跳出循环来处理写请求
                     if (maxReadBatchSize < 0 && !pendingRequests.isEmpty() && !committedRequests.isEmpty()) {
                         /*
                          * We set commitIsWaiting so that we won't check
@@ -422,7 +424,7 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
 
                     /*
                      * Process following reads if any, remove session queue(s) if
-                     * empty.
+                     * empty.  处理当前会话写之后的读请求
                      */
                     readsProcessed = 0;
                     for (Long sessionId : queuesToDrain) {

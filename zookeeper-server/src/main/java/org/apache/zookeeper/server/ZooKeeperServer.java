@@ -1297,6 +1297,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
                 // 请求进入责任链的入口
                 firstProcessor.processRequest(si);
                 if (si.cnxn != null) {
+                    // 增加正在处理的请求数increment count of the request in flight
                     incInProcess();
                 }
             } else {
@@ -1727,6 +1728,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         // in cnxn, since it will close the cnxn anyway.
         cnxn.incrOutstandingAndCheckThrottle(h);
 
+        // 根据RequestHeader中的type判断消息的类型
         if (h.getType() == OpCode.auth) {
             LOG.info("got auth packet {}", cnxn.getRemoteSocketAddress());
             AuthPacket authPacket = request.readRecord(AuthPacket::new);
@@ -1784,6 +1786,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
                     si.setLargeRequestSize(length);
                 }
                 si.setOwner(ServerCnxn.me);
+                // 提交请求到LinkedBlockingQueue
                 submitRequest(si);
             }
         }

@@ -719,6 +719,7 @@ public class ZKDatabase {
                 LOG.warn("configuration znode missing (should only happen during upgrade), creating the node");
                 this.dataTree.addConfigNode();
             }
+            // 初始化config结点
             this.dataTree.setData(
                 ZooDefs.CONFIG_NODE,
                 qv.toString().getBytes(UTF_8),

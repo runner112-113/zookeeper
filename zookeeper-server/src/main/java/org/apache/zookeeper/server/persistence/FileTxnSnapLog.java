@@ -49,6 +49,7 @@ import org.slf4j.LoggerFactory;
  * of txnlog and snapshot
  * classes
  *
+ * <p>
  * FileTxnSnapLog是ZooKeeper上层服务器和底层数据存储之间的对接层，
  * 提供了一系列操作数据文件的接口，包括事务日志文件和快照数据文
  */
@@ -269,6 +270,7 @@ public class FileTxnSnapLog {
 
         // 恢复事务日志
         RestoreFinalizer finalizer = () -> {
+            // 从事务日志load
             long highestZxid = fastForwardFromEdits(dt, sessions, listener);
             // The snapshotZxidDigest will reset after replaying the txn of the
             // zxid in the snapshotZxidDigest, if it's not reset to null after
