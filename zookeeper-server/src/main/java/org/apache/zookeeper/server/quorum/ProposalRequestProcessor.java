@@ -83,7 +83,7 @@ public class ProposalRequestProcessor implements RequestProcessor {
             zks.getLeader().processSync((LearnerSyncRequest) request);
         } else {
             if (shouldForwardToNextProcessor(request)) {
-                // 提交到CommitProcessor的处理队列
+                // 提交到CommitProcessor的处理队列（起缓冲作用）
                 nextProcessor.processRequest(request);
             }
             // 事务 类型的 Transactions ---> 需要就集群同步
@@ -96,7 +96,7 @@ public class ProposalRequestProcessor implements RequestProcessor {
                     throw new RequestProcessorException(e.getMessage(), e);
                 }
                 // 执行 SyncRequestProcessor （会将请求追加事务日志）以及
-                // 下一个 AckReuqestProcessor（该处理器会等待到达大于一半的follower的ack之后发送Commit请求）
+                // 下一个 AckRequestProcessor（该处理器会等待到达大于一半的follower的ack之后发送Commit请求）
                 syncProcessor.processRequest(request);
             }
         }

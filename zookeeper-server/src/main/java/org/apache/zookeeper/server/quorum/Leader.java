@@ -1005,6 +1005,7 @@ public class Leader extends LearnerMaster {
         outstandingProposals.remove(zxid);
 
         if (p.request != null) {
+            // 将Proposal添加到toBeApplied列表
             toBeApplied.add(p);
         }
 
@@ -1036,7 +1037,9 @@ public class Leader extends LearnerMaster {
             informAndActivate(p, designatedLeader);
         } else {
             p.request.logLatency(ServerMetrics.getMetrics().QUORUM_ACK_LATENCY);
+            // 发送COMMIT请求到所有的follower
             commit(zxid);
+            // 发送INFORM请求到所有的observer
             inform(p);
         }
         // Leader commit

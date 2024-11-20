@@ -115,7 +115,7 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
     /**
      * Incoming requests that are waiting on a commit,
      * contained in order of arrival
-     * Request 是事务修改型的;正在等待 COMMIT 的 Request，这个队列是 queuedRequest 队列的子集
+     * Request 是事务型的;正在等待 COMMIT 的 Request(发出了的提案请求，不一定得到大多数ACK了)，这个队列是 queuedRequest 队列的子集
      */
     protected final LinkedBlockingQueue<Request> queuedWriteRequests = new LinkedBlockingQueue<>();
 
@@ -139,9 +139,9 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
      * Requests that we are holding until commit comes in. Keys represent
      * session ids, each value is a linked list of the session's requests.
      *
-     * sessionId -> Deque< Request > 的映射，这是为了挂起这些请求，等待 COMMIT；
+     * sessionId -> Deque<Request> 的映射，这是为了挂起这些请求，等待 COMMIT；
      */
-    protected final Map<Long, Deque<Request>> pendingRequests = new HashMap<>(10000);
+    protected final Map<Long/*sessionId*/, Deque<Request>> pendingRequests = new HashMap<>(10000);
 
     /** The number of requests currently being processed */
     protected final AtomicInteger numRequestsProcessing = new AtomicInteger(0);
@@ -286,6 +286,7 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
                         // 非事务请求  直接处理
                         readsProcessed++;
                         numReadQueuedRequests.decrementAndGet();
+                        // 让线程池执行
                         sendToNextProcessor(request);
                     }
                     /*
@@ -430,7 +431,7 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
                     for (Long sessionId : queuesToDrain) {
                         Deque<Request> sessionQueue = pendingRequests.get(sessionId);
                         int readsAfterWrite = 0;
-                        // 读请求可以处理多个
+                        // 读请求可以处理多个，遇到写请求就会跳出
                         while (!stopped && !sessionQueue.isEmpty() && !needCommit(sessionQueue.peek())) {
                             numReadQueuedRequests.decrementAndGet();
                             sendToNextProcessor(sessionQueue.poll());
@@ -643,6 +644,7 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
         }
         LOG.debug("Processing request:: {}", request);
         request.commitProcQueueStartTime = Time.currentElapsedTime();
+        // 请求追加queuedRequests
         queuedRequests.add(request);
         // If the request will block, add it to the queue of blocking requests
         // 事务的请求需要 commit
