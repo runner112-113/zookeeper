@@ -1039,6 +1039,7 @@ public class Leader extends LearnerMaster {
             commit(zxid);
             inform(p);
         }
+        // Leader commit
         zk.commitProcessor.commit(p.request);
         // 主节点提交了 就可以返回SYNC给Follower了
         if (pendingSyncs.containsKey(zxid)) {

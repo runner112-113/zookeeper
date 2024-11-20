@@ -194,6 +194,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
 
                 // track the number of records written to the log
                 // 事务消息 append(si) 返回true，否则返回false
+                // 追加到事务日志
                 if (!si.isThrottled() && zks.getZKDatabase().append(si)) {
                     if (shouldSnapshot()) {
                         resetSnapshotStats();
@@ -232,6 +233,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
                 }
                 toFlush.add(si);
                 if (shouldFlush()) {
+                    // 请求的事务日志flush之后才会发送ACK
                     flush();
                 }
                 ServerMetrics.getMetrics().SYNC_PROCESS_TIME.add(Time.currentElapsedTime() - startProcessTime);
@@ -261,6 +263,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
                 final Request i = this.toFlush.remove();
                 long latency = Time.currentElapsedTime() - i.syncQueueStartTime;
                 ServerMetrics.getMetrics().SYNC_PROCESSOR_QUEUE_AND_FLUSH_TIME.add(latency);
+                // 诶个发送ACK给Leader
                 this.nextProcessor.processRequest(i);
             }
             if (this.nextProcessor instanceof Flushable) {

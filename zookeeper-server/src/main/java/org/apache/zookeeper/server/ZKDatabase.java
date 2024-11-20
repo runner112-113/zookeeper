@@ -602,6 +602,7 @@ public class ZKDatabase {
      * @throws IOException
      */
     public boolean truncateLog(long zxid) throws IOException {
+        // 清理相关数据 database,commitLog等
         clear();
 
         // truncate the log
@@ -611,6 +612,7 @@ public class ZKDatabase {
             return false;
         }
 
+        // 重新加载数据到内存数据库
         loadDataBase();
         return true;
     }

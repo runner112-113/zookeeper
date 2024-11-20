@@ -79,6 +79,9 @@ public class FollowerZooKeeperServer extends LearnerZooKeeperServer {
 
     LinkedBlockingQueue<Request> pendingTxns = new LinkedBlockingQueue<>();
 
+    /**
+     * 请求计入事务日志，确保flush后再触发SendAckRequestProcessor发送ACK给Leader
+     */
     public void logRequest(TxnHeader hdr, Record txn, TxnDigest digest) {
         final Request request = buildRequestToProcess(hdr, txn, digest);
         syncProcessor.processRequest(request);
@@ -205,6 +208,7 @@ public class FollowerZooKeeperServer extends LearnerZooKeeperServer {
     private Request buildRequestToProcess(final TxnHeader hdr, final Record txn, final TxnDigest digest) {
         final Request request = new Request(hdr.getClientId(), hdr.getCxid(), hdr.getType(), hdr, txn, hdr.getZxid());
         request.setTxnDigest(digest);
+        // 当前请求计入 已接收提案但未commit
         if ((request.zxid & 0xffffffffL) != 0) {
             pendingTxns.add(request);
         }
