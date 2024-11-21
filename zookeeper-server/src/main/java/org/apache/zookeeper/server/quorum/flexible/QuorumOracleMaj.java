@@ -158,6 +158,7 @@ public class QuorumOracleMaj extends QuorumMaj {
 
     @Override
     public boolean containsQuorum(Set<Long> ackSet) {
+        // 参与投票的大于2 则走QuorumMaj的半数以上逻辑
         if (oracle == null || getVotingMembers().size() > 2) {
             return super.containsQuorum(ackSet);
         } else if (!super.containsQuorum(ackSet)) {

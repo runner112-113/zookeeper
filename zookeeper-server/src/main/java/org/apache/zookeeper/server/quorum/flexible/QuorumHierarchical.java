@@ -68,9 +68,9 @@ public class QuorumHierarchical implements QuorumVerifier {
 
     private static final Logger LOG = LoggerFactory.getLogger(QuorumHierarchical.class);
 
-    private HashMap<Long, Long> serverWeight = new HashMap<>();
-    private HashMap<Long, Long> serverGroup = new HashMap<>();
-    private HashMap<Long, Long> groupWeight = new HashMap<>();
+    private HashMap<Long/*server*/, Long/*weight*/> serverWeight = new HashMap<>();
+    private HashMap<Long/*serverId*/, Long/*groupId*/> serverGroup = new HashMap<>();
+    private HashMap<Long/*groupId*/, Long/*sum weight*/> groupWeight = new HashMap<>();
 
     private int numGroups = 0;
 

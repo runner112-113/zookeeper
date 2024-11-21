@@ -58,6 +58,8 @@ public class FastLeaderElection implements Election {
      * Determine how much time a process has to wait
      * once it believes that it has reached the end of
      * leader election.
+     *
+     * 选举最后额外等待最优选票的时间
      */
     static final int finalizeWait = 200;
 
@@ -96,6 +98,7 @@ public class FastLeaderElection implements Election {
      * Connection manager. Fast leader election uses TCP for
      * communication between peers, and QuorumCnxManager manages
      * such connections.
+     * Leader选举的connection管理
      */
 
     QuorumCnxManager manager;
@@ -604,8 +607,11 @@ public class FastLeaderElection implements Election {
      * 选举的轮次
      */
     AtomicLong logicalclock = new AtomicLong(); /* Election instance */
+    // 建议的leader
     long proposedLeader;
+    // 建议的leader的zxid
     long proposedZxid;
+    // 建议leader的epoch
     long proposedEpoch;
 
     /**
@@ -734,7 +740,7 @@ public class FastLeaderElection implements Election {
                 ToSend.mType.notification,
                 proposedLeader,
                 proposedZxid,
-                // 选举的epoch
+                // 选举的轮次
                 logicalclock.get(),
                 QuorumPeer.ServerState.LOOKING,
                 sid,
@@ -968,9 +974,6 @@ public class FastLeaderElection implements Election {
              * The votes from the current leader election are stored in recvset. In other words, a vote v is in recvset
              * if v.electionEpoch == logicalclock. The current participant uses recvset to deduce on whether a majority
              * of participants has voted for it.
-             * 当前领导人选举的选票存储在recvset中。
-             * 换句话说，如果v.electionEpoch == logicalclock，则投票v在recvset中。
-             * 当前参与者使用recvset来推断是否有大多数参与者投了赞成票。
              */
             // 投票箱（所收到的选票）
             Map<Long, Vote> recvset = new HashMap<>();
@@ -981,11 +984,6 @@ public class FastLeaderElection implements Election {
              * Only FOLLOWING or LEADING notifications are stored in outofelection. The current participant could use
              * outofelection to learn which participant is the leader if it arrives late (i.e., higher logicalclock than
              * the electionEpoch of the received notifications) in a leader election.
-             *
-             * 以前的领导人选举的选票，以及现在的领导人选举中的选票都存储在选举外。
-             * 请注意，处于LOOKING状态的通知不会存储在outofelection中。
-             * 只有FOLLOWING或LEADING通知存储在outofelection中。
-             * 如果当前参与者在领导人选举中延迟（即，logicalclock 高于收到通知的选举Epoch），则可以使用outofelection来了解哪个参与者是领导人。
              */
             Map<Long, Vote> outofelection = new HashMap<>();
 
@@ -1025,6 +1023,7 @@ public class FastLeaderElection implements Election {
                  */
                 if (n == null) {
                     if (manager.haveDelivered()) {
+                        // 当没有收到任何消息是会再此发送自己的投票
                         sendNotifications();
                     } else {
                         manager.connectAll();
@@ -1081,11 +1080,13 @@ public class FastLeaderElection implements Election {
                             logicalclock.set(n.electionEpoch);
                             // 清除已接受的外部选票（vote.electionEpoch == self.electionEpoch）
                             recvset.clear();
+                            // 比较epoch，zxid，sid
                             if (totalOrderPredicate(n.leader, n.zxid, n.peerEpoch, getInitId(), getInitLastLoggedZxid(), getPeerEpoch())) {
                                 updateProposal(n.leader, n.zxid, n.peerEpoch);
                             } else {
                                 updateProposal(getInitId(), getInitLastLoggedZxid(), getPeerEpoch());
                             }
+                            // 发送投票
                             sendNotifications();
 
                             /**
@@ -1115,7 +1116,7 @@ public class FastLeaderElection implements Election {
                             Long.toHexString(n.electionEpoch));
 
                         // don't care about the version if it's in LOOKING state
-                        // 加入接受的选票集合
+                        // 加入接受的当前选举轮次的选票集合
                         /**
                          * 无论是否进行了投票变更，都会将刚刚收到的那份外部投票放入“选票集合”recvset中进行归档。
                          * recvset用于记录当前服务器在本轮次的Leader选举中收到的所有外部投票按照服务器对应的SID来区分，
@@ -1123,6 +1124,7 @@ public class FastLeaderElection implements Election {
                          */
                         recvset.put(n.sid, new Vote(n.leader, n.zxid, n.electionEpoch, n.peerEpoch));
 
+                        // 加上自己的投票构建SyncedLearnerTracker
                         voteSet = getVoteTracker(recvset, new Vote(proposedLeader, proposedZxid, logicalclock.get(), proposedEpoch));
 
                         // 超过半数 ack
@@ -1131,7 +1133,7 @@ public class FastLeaderElection implements Election {
                             // Verify if there is any change in the proposed leader
                             /**
                              * 如果统计投票发现已经有过半的服务器认可了当前的选票，这个时候，
-                             * ZooKeeper并不会立即进人步骤10来更新服务器状态，而是会等待一段时间finalizeWait（默认是200毫秒）来确定是否有新的更优的投票。
+                             * ZooKeeper并不会立即更新服务器状态，而是会等待一段时间finalizeWait（默认是200毫秒）来确定是否有新的更优的投票。
                              */
                             while ((n = recvqueue.poll(finalizeWait, TimeUnit.MILLISECONDS)) != null) {
                                 if (totalOrderPredicate(n.leader, n.zxid, n.peerEpoch, proposedLeader, proposedZxid, proposedEpoch)) {

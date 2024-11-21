@@ -1261,7 +1261,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
         startLeaderElection();
         // 启动jvm停顿监控
         startJvmPauseMonitor();
-        // 启动线程（包含选举逻辑） QuorumPeer 是一个线程
+        // 启动线程（包含选举逻辑） QuorumPeer 是一个线程,执行run方法开启选举投票
         super.start();
     }
 
@@ -1649,6 +1649,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                                 shuttingDownLE = false;
                                 startLeaderElection();
                             }
+                            // 选举
                             setCurrentVote(makeLEStrategy().lookForLeader());
                         } catch (Exception e) {
                             LOG.warn("Unexpected exception", e);

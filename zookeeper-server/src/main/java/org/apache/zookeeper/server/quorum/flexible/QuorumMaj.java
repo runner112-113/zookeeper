@@ -40,6 +40,7 @@ public class QuorumMaj implements QuorumVerifier {
     private static final Logger LOG = LoggerFactory.getLogger(QuorumMaj.class);
 
     private Map<Long, QuorumServer> allMembers = new HashMap<>();
+    // 参与投票的
     private Map<Long, QuorumServer> votingMembers = new HashMap<>();
     private Map<Long, QuorumServer> observingMembers = new HashMap<>();
     private long version = 0;
@@ -137,6 +138,8 @@ public class QuorumMaj implements QuorumVerifier {
     /**
      * Verifies if a set is a majority. Assumes that ackSet contains acks only
      * from votingMembers
+     *
+     * 是否达到了成为Leader的票数
      */
     public boolean containsQuorum(Set<Long> ackSet) {
         return (ackSet.size() > half);
