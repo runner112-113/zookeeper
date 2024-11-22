@@ -477,7 +477,7 @@ public class LearnerHandler extends ZooKeeperThread {
             ia.readRecord(qp, "packet");
 
             messageTracker.trackReceived(qp.getType());
-            // 第一个包必须是表明身份的包
+            // 第一个包必须是表明身份的包 FOLLOWERINFO 或者 OBSERVERINFO
             if (qp.getType() != Leader.FOLLOWERINFO && qp.getType() != Leader.OBSERVERINFO) {
                 LOG.error("First packet {} is not FOLLOWERINFO or OBSERVERINFO!", qp.toString());
 
@@ -527,7 +527,8 @@ public class LearnerHandler extends ZooKeeperThread {
             long peerLastZxid;
             StateSummary ss = null;
             long zxid = qp.getZxid();
-            // 等待集群中过半服务器确认epoch
+            // 等待集群中过半服务器确认epoch，
+            // 当达到大多数ACK之后，会触发connectingFollowers.notifyAll();从而解除阻塞
             long newEpoch = learnerMaster.getEpochToPropose(this.getSid(), lastAcceptedEpoch);
             // 构建新的Leader的Zxid
             long newLeaderZxid = ZxidUtils.makeZxid(newEpoch, 0);
@@ -542,11 +543,13 @@ public class LearnerHandler extends ZooKeeperThread {
                 learnerMaster.waitForEpochAck(this.getSid(), ss);
             } else {
                 byte[] ver = new byte[4];
+                // 发送LEADERINFO 等待Follower返回自己的zxid信息
                 ByteBuffer.wrap(ver).putInt(0x10000);
                 QuorumPacket newEpochPacket = new QuorumPacket(Leader.LEADERINFO, newLeaderZxid, ver, null);
                 oa.writeRecord(newEpochPacket, "packet");
                 messageTracker.trackSent(Leader.LEADERINFO);
                 bufferedOutput.flush();
+                // 等待Follower返回自己的zxid信息
                 QuorumPacket ackEpochPacket = new QuorumPacket();
                 ia.readRecord(ackEpochPacket, "packet");
                 messageTracker.trackReceived(ackEpochPacket.getType());
@@ -556,6 +559,7 @@ public class LearnerHandler extends ZooKeeperThread {
                 }
                 ByteBuffer bbepoch = ByteBuffer.wrap(ackEpochPacket.getData());
                 ss = new StateSummary(bbepoch.getInt(), ackEpochPacket.getZxid());
+                // 等到大多数的ACK Epoch，后续进行同步操作
                 learnerMaster.waitForEpochAck(this.getSid(), ss);
             }
             // Follower最后的zxid
@@ -818,7 +822,7 @@ public class LearnerHandler extends ZooKeeperThread {
         ReadLock rl = lock.readLock();
         try {
             rl.lock();
-            // 从内存数据库读取缓存中的最大和最小提交的zxid
+            // 缓存在内存的近期提交的日志最大最小zxid,默认缓存500条
             long maxCommittedLog = db.getmaxCommittedLog();
             long minCommittedLog = db.getminCommittedLog();
             long lastProcessedZxid = db.getDataTreeLastProcessedZxid();
@@ -867,6 +871,7 @@ public class LearnerHandler extends ZooKeeperThread {
                 // Force learnerMaster to use snapshot to sync with follower
                 LOG.warn("Forcing snapshot sync - should not see this in production");
                 // 如果learner的zxid与leader最近的zxid相同，则发送DIFF包进行差异化同步
+                // 提交事务日志，单位commit
             } else if (lastProcessedZxid == peerLastZxid) {
                 // Follower is already sync with us, send empty diff
                 LOG.info(
@@ -876,7 +881,7 @@ public class LearnerHandler extends ZooKeeperThread {
                 queueOpPacket(Leader.DIFF, peerLastZxid);
                 needOpPacket = false;
                 needSnap = false;
-                // Learner的zxid大于leader的最大zxid，说明learner领先于leader，仅需要回滚数据，发送TRUNC包进行回滚同步
+                // Learner的zxid大于leader事务日志的最大zxid，说明learner领先于leader，仅需要回滚数据，发送TRUNC包进行回滚同步
             } else if (peerLastZxid > maxCommittedLog && !isPeerNewEpochZxid) {
                 // Newer than committedLog, send trunc and done
                 LOG.debug(
@@ -911,7 +916,7 @@ public class LearnerHandler extends ZooKeeperThread {
                     // 将事务日志中的proposal放入queue中等待发送给learner
                     currentZxid = queueCommittedProposals(txnLogItr, peerLastZxid, minCommittedLog, maxCommittedLog);
 
-                    // 此种情况说明需要进行SNAP全量同步，该方法返回true，在run(方法中再进行处理
+                    // 此种情况说明需要进行SNAP全量同步，该方法返回true，在run方法中再进行处理
                     if (currentZxid < minCommittedLog) {
                         LOG.info(
                             "Detected gap between end of txnlog: 0x{} and start of committedLog: 0x{}",

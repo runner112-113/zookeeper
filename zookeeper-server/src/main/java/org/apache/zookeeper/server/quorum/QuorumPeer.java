@@ -1692,6 +1692,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                 case LEADING:
                     LOG.info("LEADING");
                     try {
+                        // 创建Leader对象
                         setLeader(makeLeader(logFactory));
                         leader.lead();
                         setLeader(null);

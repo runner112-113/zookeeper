@@ -333,29 +333,7 @@ public class Leader extends LearnerMaster {
 
     private final List<ServerSocket> serverSockets = new LinkedList<>();
 
-    public Leader(QuorumPeer self, LeaderZooKeeperServer zk) throws IOException {
-        this.self = self;
-        this.proposalStats = new BufferStats();
 
-        Set<InetSocketAddress> addresses;
-        if (self.getQuorumListenOnAllIPs()) {
-            addresses = self.getQuorumAddress().getWildcardAddresses();
-        } else {
-            addresses = self.getQuorumAddress().getAllAddresses();
-        }
-
-        addresses.stream()
-          .map(address -> createServerSocket(address, self.shouldUsePortUnification(), self.isSslQuorum()))
-          .filter(Optional::isPresent)
-          .map(Optional::get)
-          .forEach(serverSockets::add);
-
-        if (serverSockets.isEmpty()) {
-            throw new IOException("Leader failed to initialize any of the following sockets: " + addresses);
-        }
-
-        this.zk = zk;
-    }
 
     InetSocketAddress recreateInetSocketAddr(String hostString, int port) {
         return new InetSocketAddress(hostString, port);
@@ -648,6 +626,7 @@ public class Leader extends LearnerMaster {
         zk.registerJMX(new LeaderBean(this, zk), self.jmxLocalPeerBean);
 
         try {
+            // DISCOVERY PHASE
             self.setZabState(QuorumPeer.ZabState.DISCOVERY);
             self.tick.set(0);
             zk.loadData();
@@ -714,10 +693,11 @@ public class Leader extends LearnerMaster {
             // We have to get at least a majority of servers in sync with
             // us. We do this by waiting for the NEWLEADER packet to get
             // acknowledged
-
+            // 等待大多数FOLLOWER的ACK EPOCH
             waitForEpochAck(self.getMyId(), leaderStateSummary);
             self.setCurrentEpoch(epoch);
             self.setLeaderAddressAndId(self.getQuorumAddress(), self.getMyId());
+            // SYNCHRONIZATION PHASE
             self.setZabState(QuorumPeer.ZabState.SYNCHRONIZATION);
 
             try {
@@ -775,6 +755,7 @@ public class Leader extends LearnerMaster {
                 self.setZooKeeperServer(zk);
             }
 
+            // BROADCAST PHASE
             self.setZabState(QuorumPeer.ZabState.BROADCAST);
             self.adminServer.setZooKeeperServer(zk);
 
@@ -1500,7 +1481,9 @@ public class Leader extends LearnerMaster {
             }
             QuorumVerifier verifier = self.getQuorumVerifier();
             // 超过一半的follower发送FOLLOWERINFO过来才可以
-            if (connectingFollowers.contains(self.getMyId()) && verifier.containsQuorum(connectingFollowers)) {
+            if (connectingFollowers.contains(self.getMyId()) &&
+                    // 判断超半数
+                    verifier.containsQuorum(connectingFollowers)) {
                 waitingForNewEpoch = false;
                 // 将epoch写入acceptEpoch
                 self.setAcceptedEpoch(epoch);

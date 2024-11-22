@@ -96,6 +96,7 @@ public class ZKDatabase {
 
     public static final String COMMIT_LOG_COUNT = "zookeeper.commitLogCount";
     public static final int DEFAULT_COMMIT_LOG_COUNT = 500;
+    // 在内存中维护上次提交请求的列表，以便在追随者不太落后时与追随者快速同步
     public int commitLogCount;
     protected Queue<Proposal> committedLog = new ArrayDeque<>();
     protected ReentrantReadWriteLock logLock = new ReentrantReadWriteLock();
