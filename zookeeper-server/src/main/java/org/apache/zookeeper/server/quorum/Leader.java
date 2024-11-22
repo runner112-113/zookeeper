@@ -1326,7 +1326,9 @@ public class Leader extends LearnerMaster {
 
             LOG.debug("Proposing:: {}", request);
 
+            // 记录最新未commit的提案zxid
             lastProposed = p.packet.getZxid();
+            // 记录未commit的zxid（处理中的proposal）
             outstandingProposals.put(lastProposed, p);
             // 发给所有的Follower
             sendPacket(pp);
@@ -1340,7 +1342,6 @@ public class Leader extends LearnerMaster {
      *
      * @param r the request
      */
-
     public synchronized void processSync(LearnerSyncRequest r) {
         // 当Leader收到一个sync请求时，如果leader当前没有待commit的决议，那么leader会立即发送一个Leader.SYNC消息给follower
         if (outstandingProposals.isEmpty()) {
