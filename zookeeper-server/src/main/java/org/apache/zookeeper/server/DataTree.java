@@ -152,9 +152,9 @@ public class DataTree {
 
     /**
      * This hashtable lists the paths of the ephemeral nodes of a session.
-     * 临时节点
+     * 存储临时节点
      */
-    private final Map<Long, HashSet<String>> ephemerals = new ConcurrentHashMap<>();
+    private final Map<Long/*客户端id*/, HashSet<String>/*临时结点集合*/> ephemerals = new ConcurrentHashMap<>();
 
     /**
      * This set contains the paths of all container nodes
@@ -880,6 +880,7 @@ public class DataTree {
                     createTxn.getPath(),
                     createTxn.getData(),
                     createTxn.getAcl(),
+                    // 临时结点就拿到clientId
                     createTxn.getEphemeral() ? header.getClientId() : 0,
                     createTxn.getParentCVersion(),
                     header.getZxid(),

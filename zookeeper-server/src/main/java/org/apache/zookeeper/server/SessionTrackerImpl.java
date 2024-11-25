@@ -48,7 +48,7 @@ public class SessionTrackerImpl extends ZooKeeperCriticalThread implements Sessi
 
 
     // sessionId --> Session
-    protected final ConcurrentHashMap<Long, SessionImpl> sessionsById = new ConcurrentHashMap<>();
+    protected final ConcurrentHashMap<Long/*sessionId*/, SessionImpl> sessionsById = new ConcurrentHashMap<>();
 
     // 会话超时管理
     private final ExpiryQueue<SessionImpl> sessionExpiryQueue;
