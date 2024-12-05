@@ -112,7 +112,7 @@ public class Follower extends Learner {
                 self.setZabState(QuorumPeer.ZabState.SYNCHRONIZATION);
                 // 和Leader进行同步
                 syncWithLeader(newEpochZxid);
-                // 进入ZAB的BROADCAST阶段
+                // 数据同步完成后，也就是可以正常处理来自领导者的广播消息了，设置ZAB状态为广播(进入ZAB的BROADCAST阶段)
                 self.setZabState(QuorumPeer.ZabState.BROADCAST);
                 completedSync = true;
                 long syncTime = Time.currentElapsedTime() - startTime;
@@ -127,6 +127,10 @@ public class Follower extends Learner {
                 }
                 // create a reusable packet to reduce gc impact
                 // 在此循环处理请求
+                /**
+                 * 当跟随者检测到连接到领导者的读操作超时了（比如领导者节点故障了），这时会抛出异常（Exception），
+                 * 跳出上面的读取数据包和处理数据包的循环，并最终跟随者将节点状态变更为选举状态。
+                 */
                 QuorumPacket qp = new QuorumPacket();
                 while (this.isRunning()) {
                     readPacket(qp);

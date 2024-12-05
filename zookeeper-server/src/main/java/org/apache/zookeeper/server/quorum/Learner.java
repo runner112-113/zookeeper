@@ -717,6 +717,9 @@ public class Learner {
                     }
 
                     break;
+                    /**
+                     * 接收到Leader的UPTODATE消息，说明数据同步已经完成了
+                     */
                 case Leader.UPTODATE:
                     LOG.info("Learner received UPTODATE message");
                     if (newLeaderQV != null) {
@@ -731,6 +734,7 @@ public class Learner {
                     }
                     self.setZooKeeperServer(zk);
                     self.adminServer.setZooKeeperServer(zk);
+                    //
                     break outerLoop;
                 case Leader.NEWLEADER: // Getting NEWLEADER here instead of in discovery
                     // means this is Zab 1.0
