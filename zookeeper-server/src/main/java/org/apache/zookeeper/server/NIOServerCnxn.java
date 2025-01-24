@@ -185,6 +185,7 @@ public class NIOServerCnxn extends ServerCnxn {
             }
         }
 
+        // 一个请求已经全部读完
         if (incomingBuffer.remaining() == 0) { // have we read length bytes?
             incomingBuffer.flip();
             packetReceived(4 + incomingBuffer.remaining());
@@ -192,8 +193,10 @@ public class NIOServerCnxn extends ServerCnxn {
                 // 创建连接请求
                 readConnectRequest();
             } else {
+                // 此时一个请求的所有数据已读完，可以反序列化后进行处理
                 readRequest();
             }
+            // 置空lenBuffer，并重置incomingBuffer为lenBuffer
             lenBuffer.clear();
             incomingBuffer = lenBuffer;
         }
@@ -334,6 +337,8 @@ public class NIOServerCnxn extends ServerCnxn {
                 return;
             }
             if (k.isReadable()) {
+                // 将內容读取到incomingBuffer中
+                // 可能读取到lenBuffer中，也可能读取到根据请求内容长度新分配的bytebuffer中
                 int rc = sock.read(incomingBuffer);
                 if (rc < 0) {
                     try {
@@ -346,16 +351,23 @@ public class NIOServerCnxn extends ServerCnxn {
                         return;
                     }
                 }
+                // 如果读满了
                 if (incomingBuffer.remaining() == 0) {
                     boolean isPayload;
+                    // 关键：如果incomingBuffer和LenBuffer指向同一个byteBuffer
+                    //说明是新请求的第一次读，读取的是请求内容长度
                     if (incomingBuffer == lenBuffer) { // start of next request
                         incomingBuffer.flip();
+                        // 获取请求内容长度
                         isPayload = readLength(k);
                         incomingBuffer.clear();
                     } else {
                         // continuation
+                        // 说明tcp拆包了，需要继续读未读完的包
+                        // continuation
                         isPayload = true;
                     }
+                    // 继续读请求内容
                     if (isPayload) { // not the case for 4letterword
                         readPayload();
                     } else {
@@ -560,6 +572,7 @@ public class NIOServerCnxn extends ServerCnxn {
      */
     private boolean readLength(SelectionKey k) throws IOException {
         // Read the length, now get the buffer
+        // 获取请求的长度
         int len = lenBuffer.getInt();
         if (!initialized && checkFourLetterWord(sk, len)) {
             return false;
@@ -575,6 +588,7 @@ public class NIOServerCnxn extends ServerCnxn {
         }
         // checkRequestSize will throw IOException if request is rejected
         zkServer.checkRequestSizeWhenReceivingMessage(len);
+        // 分配请求内容长度大小的ByteBuffer
         incomingBuffer = ByteBuffer.allocate(len);
         return true;
     }
